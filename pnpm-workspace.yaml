@@ -1,0 +1,7 @@
+packages:
+  - 'contracts'
+  - 'sdk'
+  - 'demo'
+  - 'demo/ui'
+  - 'api'
+  - 'mcp-server'

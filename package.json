@@ -1,0 +1,26 @@
+{
+  "name": "sigil-protocol-monorepo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Identity and Provenance Infrastructure for Autonomous AI Agents — built on 0G",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --parallel run build",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r --parallel run lint",
+    "typecheck": "pnpm -r --parallel run typecheck",
+    "clean": "pnpm -r --parallel run clean && rm -rf node_modules",
+    "demo:scenario1": "pnpm --filter sigil-demo run scenario1",
+    "demo:scenario2": "pnpm --filter sigil-demo run scenario2",
+    "demo:scenario3": "pnpm --filter sigil-demo run scenario3"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.12.0"
+  },
+  "packageManager": "pnpm@10.24.0"
+}
