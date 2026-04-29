@@ -1,0 +1,34 @@
+{
+  "name": "@sigil/contracts",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Sigil Protocol — Solidity contracts (SigilRegistry + ProvenanceNotary) for 0G Chain",
+  "license": "MIT",
+  "scripts": {
+    "build": "hardhat compile",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "clean": "hardhat clean && rm -rf typechain-types coverage coverage.json",
+    "typecheck": "tsc --noEmit",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network galileo",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
+    "lint": "echo 'no linter configured for contracts package'"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@types/chai": "^4.3.16",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.12.0",
+    "chai": "^4.4.1",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.11.0",
+    "hardhat": "^2.22.0",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  }
+}
