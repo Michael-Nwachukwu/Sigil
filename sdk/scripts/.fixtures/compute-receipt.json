@@ -1,0 +1,19 @@
+{
+  "savedAt": "2026-04-29T18:41:52.724Z",
+  "signer": "0x7FBbE68068A3Aa7E479A1E51e792F4C2073b018f",
+  "provider": "0xa48f01287233509FD694a22Bf840225062E67836",
+  "chatID": "a52fdccf-cd01-42db-b0fb-72fd4b3ef7df",
+  "verified": true,
+  "elapsedMs": 65329,
+  "receipt": {
+    "modelId": "qwen/qwen-2.5-7b-instruct",
+    "modelVersionHash": "0xf215810956002bbbc08b8bfd0a2deae14ea59a7875955c644692ea80592d26ea",
+    "inputHash": "0x9a1c44895cb7104e56d980398c9c83d24848f620d37f29c9f9e9cb6a8215defa",
+    "outputHash": "0x94d1f2c1e2e7685df071019399ecd71355c7d2cadef7961ff4f92f941fee6bbe",
+    "proof": "{\"schema\":\"sigil.sealed-inference/1\",\"provider\":\"0xa48f01287233509FD694a22Bf840225062E67836\",\"providerModel\":\"qwen/qwen-2.5-7b-instruct\",\"chatID\":\"a52fdccf-cd01-42db-b0fb-72fd4b3ef7df\",\"verified\":true,\"inputHash\":\"0x9a1c44895cb7104e56d980398c9c83d24848f620d37f29c9f9e9cb6a8215defa\",\"outputHash\":\"0x94d1f2c1e2e7685df071019399ecd71355c7d2cadef7961ff4f92f941fee6bbe\",\"timestamp\":1777488093}",
+    "timestamp": 1777488093
+  },
+  "proofRootHash": "0xbd3eed5c53022f2d31dfe5f0b40fe885cc09e0fc4a6bc8b30f7dbc6d5d437a19",
+  "modelFingerprintHash": "0x2bb24377ccb1177d8314ad95917dc7fb7693854d6ca88d0de1fb69c4abaa35d6",
+  "output": "{\n  \"riskScore\": 1,\n  \"reasoning\": \"The address is likely invalid or reserved, and the target is very new.\",\n  \"confidence\": 0.95\n}"
+}

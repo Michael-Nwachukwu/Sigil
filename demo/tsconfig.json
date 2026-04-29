@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "lib": ["ES2022"],
+    "noEmit": true
+  },
+  "include": ["agents/**/*.ts", "scripts/**/*.ts", "scenarios/**/*.ts"],
+  "exclude": ["node_modules", ".fixtures", "ui"]
+}
