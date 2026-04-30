@@ -1,0 +1,306 @@
+/* ── Sigil Protocol — Design Tokens ─────────────────────────────────────
+   5 palettes activated via data-theme="..." on <html>
+   Fallback = onyx (dark default)
+──────────────────────────────────────────────────────────────────────── */
+
+/* ── ONYX & PLASMA (default) ────────────────────────────────────────── */
+:root, [data-theme="onyx"] {
+  --bg:             #080808;
+  --bg-raised:      #111111;
+  --bg-elevated:    #1a1a1a;
+  --bg-overlay:     #222222;
+  --border:         #222222;
+  --border-strong:  #333333;
+  --text:           #f0ece4;
+  --text-2:         #a0a0b8;
+  --text-3:         #606078;
+  --accent:         #8b5cf6;
+  --accent-dim:     rgba(139,92,246,0.15);
+  --accent-2:       #a78bfa;
+  --sealed:         #c8a830;
+  --sealed-dim:     rgba(200,168,48,0.15);
+  --unsealed:       #c87830;
+  --unsealed-dim:   rgba(200,120,48,0.15);
+  --danger:         #ef4444;
+  --ok:             #22c55e;
+  --nav-bg:         rgba(8,8,8,0.92);
+  --card-bg:        #111111;
+  --code-bg:        #0a0a0a;
+  --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.4);
+  color-scheme: dark;
+}
+
+/* ── COLD VAULT ──────────────────────────────────────────────────────── */
+[data-theme="vault"] {
+  --bg:             #08101e;
+  --bg-raised:      #0d1828;
+  --bg-elevated:    #122030;
+  --bg-overlay:     #182840;
+  --border:         #1c2c40;
+  --border-strong:  #263848;
+  --text:           #d8e8f8;
+  --text-2:         #7898b8;
+  --text-3:         #3a5878;
+  --accent:         #4dd8e0;
+  --accent-dim:     rgba(77,216,224,0.12);
+  --accent-2:       #a0e8f0;
+  --sealed:         #e8a830;
+  --sealed-dim:     rgba(232,168,48,0.15);
+  --unsealed:       #c87830;
+  --unsealed-dim:   rgba(200,120,48,0.15);
+  --danger:         #f87171;
+  --ok:             #34d399;
+  --nav-bg:         rgba(8,16,30,0.92);
+  --card-bg:        #0d1828;
+  --code-bg:        #060e1a;
+  --shadow:         0 1px 3px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+
+/* ── CYPHERPUNK VELLUM ───────────────────────────────────────────────── */
+[data-theme="vellum"] {
+  --bg:             #f4ede0;
+  --bg-raised:      #ede4d0;
+  --bg-elevated:    #e8dcc8;
+  --bg-overlay:     #dfd0b8;
+  --border:         #c8b898;
+  --border-strong:  #a89878;
+  --text:           #18100a;
+  --text-2:         #5a4030;
+  --text-3:         #8a7060;
+  --accent:         #8b1a10;
+  --accent-dim:     rgba(139,26,16,0.1);
+  --accent-2:       #b83020;
+  --sealed:         #a07a10;
+  --sealed-dim:     rgba(160,122,16,0.12);
+  --unsealed:       #806030;
+  --unsealed-dim:   rgba(128,96,48,0.12);
+  --danger:         #c02020;
+  --ok:             #1a6030;
+  --nav-bg:         rgba(244,237,224,0.95);
+  --card-bg:        #ede4d0;
+  --code-bg:        #e0d8c8;
+  --shadow:         0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  color-scheme: light;
+}
+
+/* ── LIVING WAX ──────────────────────────────────────────────────────── */
+[data-theme="wax"] {
+  --bg:             #f8f2ea;
+  --bg-raised:      #f0e8dc;
+  --bg-elevated:    #e8dcd0;
+  --bg-overlay:     #dfd0c0;
+  --border:         #d0bca8;
+  --border-strong:  #b0988a;
+  --text:           #200808;
+  --text-2:         #5e1916;
+  --text-3:         #906858;
+  --accent:         #5e1916;
+  --accent-dim:     rgba(94,25,22,0.1);
+  --accent-2:       #8b2820;
+  --sealed:         #b89020;
+  --sealed-dim:     rgba(184,144,32,0.12);
+  --unsealed:       #7a5818;
+  --unsealed-dim:   rgba(122,88,24,0.12);
+  --danger:         #991010;
+  --ok:             #1a5a28;
+  --nav-bg:         rgba(248,242,234,0.96);
+  --card-bg:        #f0e8dc;
+  --code-bg:        #e8ddd0;
+  --shadow:         0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.05);
+  color-scheme: light;
+}
+
+/* ── GALILEO BLUEPRINT ───────────────────────────────────────────────── */
+[data-theme="blueprint"] {
+  --bg:             #f2f2ee;
+  --bg-raised:      #e8e8e2;
+  --bg-elevated:    #dededa;
+  --bg-overlay:     #d4d4ce;
+  --border:         #c0c0b8;
+  --border-strong:  #a0a098;
+  --text:           #14141e;
+  --text-2:         #48485a;
+  --text-3:         #80808a;
+  --accent:         #c8a820;
+  --accent-dim:     rgba(200,168,32,0.12);
+  --accent-2:       #e8c830;
+  --sealed:         #2878b0;
+  --sealed-dim:     rgba(40,120,176,0.12);
+  --unsealed:       #9a7010;
+  --unsealed-dim:   rgba(154,112,16,0.12);
+  --danger:         #c02828;
+  --ok:             #187830;
+  --nav-bg:         rgba(242,242,238,0.96);
+  --card-bg:        #e8e8e2;
+  --code-bg:        #deded8;
+  --shadow:         0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  color-scheme: light;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────── */
+:root {
+  --font-display: var(--font-display-src), Georgia, serif;
+  --font-body:    var(--font-body-src), system-ui, sans-serif;
+  --font-mono:    var(--font-mono-src), 'IBM Plex Mono', monospace;
+
+  --text-xs:  11px;
+  --text-sm:  13px;
+  --text-base:15px;
+  --text-md:  17px;
+  --text-lg:  20px;
+  --text-xl:  26px;
+  --text-2xl: 34px;
+  --text-3xl: 44px;
+  --text-4xl: 58px;
+  --text-hero:clamp(44px, 6vw, 76px);
+
+  --leading-tight: 1.08;
+  --leading-snug:  1.3;
+  --leading-normal:1.6;
+  --leading-loose: 1.8;
+
+  --tracking-tight: -0.025em;
+  --tracking-snug:  -0.015em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.06em;
+  --tracking-wider:  0.12em;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+::selection { background: var(--accent); color: #fff; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+/* ── Grain overlay ───────────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.03;
+}
+
+/* ── Utility classes ─────────────────────────────────────────────────── */
+.display { font-family: var(--font-display); }
+.mono    { font-family: var(--font-mono); }
+
+.text-accent   { color: var(--accent); }
+.text-2        { color: var(--text-2); }
+.text-3        { color: var(--text-3); }
+.text-sealed   { color: var(--sealed); }
+.text-unsealed { color: var(--unsealed); }
+.text-ok       { color: var(--ok); }
+
+.border-accent { border-color: var(--accent); }
+
+/* Hashes — ALWAYS mono, NEVER proportional */
+.hash {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.hash-dim { color: var(--text-2); }
+
+/* Layout */
+.page-wrap  { max-width: 1160px; margin: 0 auto; padding: 0 52px; }
+.page-wide  { max-width: 1400px; margin: 0 auto; padding: 0 52px; }
+
+/* Sections */
+.section { padding: 96px 0; border-top: 1px solid var(--border); }
+
+/* Nav */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 48px;
+  border-bottom: 1px solid var(--border);
+  background: var(--nav-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-radius: 3px;
+  border: none; cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.btn:hover { opacity: 0.82; transform: translateY(-1px); }
+.btn-primary   { background: var(--accent); color: #fff; }
+.btn-secondary { background: transparent; border: 1px solid var(--border-strong); color: var(--text-2); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
+
+/* Tags / pills */
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-3);
+}
+.tag-accent  { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.tag-sealed  { border-color: var(--sealed); color: var(--sealed); background: var(--sealed-dim); }
+.tag-unsealed{ border-color: var(--unsealed); color: var(--unsealed); background: var(--unsealed-dim); }
+.tag-ok      { border-color: var(--ok); color: var(--ok); background: rgba(34,197,94,0.08); }
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.card-header {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* Code blocks */
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+  padding: 20px 24px;
+  white-space: pre;
+}
+
+/* Keyframes */
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes blink     { 50%{opacity:0} }
+@keyframes fade-up   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+@keyframes log-in    { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:none} }
+@keyframes spin      { to{transform:rotate(360deg)} }
+@keyframes inscription {
+  0%   { stroke-dashoffset: 1000; opacity: 0; }
+  10%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
