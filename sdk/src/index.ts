@@ -19,6 +19,12 @@ export type {
   ProvenanceNotaryClientConfig,
 } from './provenance/ProvenanceNotary';
 
+export { AutoAttestSidecar, attestationForArtifact } from './passport/AutoAttest';
+export type {
+  AutoAttestSidecarConfig,
+  AttestationRecord,
+} from './passport/AutoAttest';
+
 export {
   derivePassportId,
   manifestKvKey,
@@ -50,6 +56,16 @@ export type { KeeperHubAdapterConfig, BroadcastResult } from './adapters/KeeperH
 
 export { mintAgentKeypair, redactMintedKeypair } from './utils/mintAgentKeypair';
 export type { MintedAgentKeypair } from './utils/mintAgentKeypair';
+
+export {
+  writeCredential,
+  readCredential,
+  listCredentials,
+  deleteCredential,
+  credentialPath,
+  credentialsDir,
+} from './utils/credentials';
+export type { SigilCredential, WriteCredentialOptions } from './utils/credentials';
 
 export {
   encryptBytes,

@@ -13,6 +13,9 @@
       "require": "./dist/index.js"
     }
   },
+  "bin": {
+    "sigil-agent": "dist/sigil-agent.js"
+  },
   "files": [
     "dist",
     "README.md"

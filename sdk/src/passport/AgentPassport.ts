@@ -24,6 +24,7 @@ import {
 } from '../utils/crypto';
 import { RegistryError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { writeCredential } from '../utils/credentials';
 import { ZeroGStorageAdapter } from '../adapters/ZeroGStorageAdapter';
 import { awaitTx } from '../utils/waitForReceipt';
 import {
@@ -53,6 +54,25 @@ export interface RegisterParams {
    * cryptographic random — the same principal can register many agents.
    */
   nonce?: bigint;
+  /**
+   * If set, write a discoverability credential to ~/.sigil/credentials/<persistAs>.json
+   * after a successful registration. The file holds passportId, agentAddress,
+   * principal, registry/notary addresses, and chainId — NEVER the private key.
+   * The agent runtime can later `readCredential(persistAs)` to report its own
+   * identity back to the operator without rediscovering it on-chain.
+   */
+  persistAs?: string;
+  /**
+   * Optional metadata fields written into the credential file (notaryAddress,
+   * chainId, rpcUrl). Only used when `persistAs` is set. If omitted, the
+   * credential file will not include these fields and downstream tooling
+   * should fall back to its own config.
+   */
+  credentialContext?: {
+    notaryAddress?: `0x${string}`;
+    chainId?: number;
+    rpcUrl?: string;
+  };
 }
 
 export interface RegisterResult {
@@ -130,6 +150,25 @@ export class AgentPassportClient {
       label: 'SigilRegistry.register',
     });
     logger.info({ passportId, txHash: receipt.hash }, 'agent passport registered');
+
+    if (params.persistAs) {
+      const ctx = params.credentialContext ?? {};
+      writeCredential({
+        name: params.persistAs,
+        passportId: passportId as `0x${string}`,
+        agentAddress: agentKeypair.agentAddress as `0x${string}`,
+        principal: principalAddress as `0x${string}`,
+        registry: this.config.registryAddress as `0x${string}`,
+        notary: (ctx.notaryAddress ??
+          ('0x0000000000000000000000000000000000000000' as `0x${string}`)),
+        chainId: ctx.chainId ?? Number((await provider.getNetwork()).chainId),
+        registeredAtBlock: Number(receipt.blockNumber),
+        registeredAt: new Date().toISOString(),
+        registerTxHash: receipt.hash as `0x${string}`,
+        rpcUrl: ctx.rpcUrl,
+        agentDescription: params.agentDescription,
+      });
+    }
 
     return {
       passportId,
