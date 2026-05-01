@@ -216,6 +216,8 @@ function phaseLabel(event: ChatProgressEvent): string {
       return 'running sealed inference...';
     case 'notarizing-response':
       return 'notarizing response...';
+    case 'attesting-response':
+      return 'attesting response...';
     case 'completed':
       return 'response notarized.';
   }
@@ -302,6 +304,21 @@ async function main() {
         : 'OFF (set SIGIL_KEEPER_RELAY_PRIVATE_KEY + run add-relay to enable)'
     }\n`,
   );
+
+  // Each turn spends ~0.005 OG on 0G Storage submits + a notarize tx. When the
+  // agent wallet runs dry, 0G's flow contract reverts during `estimateGas`
+  // with an opaque `require(false)` and the chat looks "stuck at notarizing".
+  // Catch it up front instead.
+  const agentBal = await provider.getBalance(agentWallet.address);
+  const minAgentBal = ethers.parseEther('0.01');
+  process.stdout.write(`  balance     ${ethers.formatEther(agentBal)} OG\n`);
+  if (agentBal < minAgentBal) {
+    process.stdout.write(
+      `\n  WARNING: agent wallet is low — each turn needs ~0.005 OG for 0G Storage fees.\n` +
+        `  top up before chatting:\n` +
+        `    pnpm --filter sigil-demo run top-up -- --name ${args.name} --amount 0.1\n`,
+    );
+  }
   process.stdout.write(
     `\nType a task in plain English. /help for commands. /exit (or Ctrl-D) to quit.\n\n`,
   );
@@ -389,6 +406,14 @@ async function main() {
     busy = true;
     const start = Date.now();
     process.stdout.write(`  planning response...\n`);
+    const attestationHint =
+      relayWallet != null
+        ? setTimeout(() => {
+            if (busy) {
+              process.stdout.write(`  attesting response...\n`);
+            }
+          }, 20_000)
+        : null;
     try {
       const { result: turn, trace } = await captureProcessTrace(() =>
         agent.ask(line, {
@@ -415,6 +440,9 @@ async function main() {
     } catch (err) {
       process.stdout.write(`\n  ERROR: ${(err as Error).message}\n\n`);
     } finally {
+      if (attestationHint != null) {
+        clearTimeout(attestationHint);
+      }
       busy = false;
       rl.prompt();
     }

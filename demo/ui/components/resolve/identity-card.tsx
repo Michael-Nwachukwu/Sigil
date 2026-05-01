@@ -176,6 +176,22 @@ export function IdentityCard({ passport }: { passport: PassportRecord }) {
               }}
             />
           </div>
+          {passport.taskCount > 0n && passport.taskCount < 5n ? (
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 12,
+                color: "var(--text-3)",
+                lineHeight: 1.6,
+              }}
+            >
+              Early score warning: this is a tiny sample. A score of{" "}
+              {passport.reputationScore.toString()} / 1000 after{" "}
+              {passport.taskCount.toString()} attested{" "}
+              {passport.taskCount === 1n ? "task" : "tasks"} means "perfect so far,"
+              not "battle-tested."
+            </div>
+          ) : null}
         </div>
 
         <div

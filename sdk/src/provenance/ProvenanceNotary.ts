@@ -240,10 +240,14 @@ export class ProvenanceNotaryClient {
       // failures (relay not registered, gas spike, RPC blip) must not throw
       // back into the agent's hot path.
       try {
+        // Surface this as a distinct phase in callers so the operator doesn't
+        // mistake the follow-up relay tx for the original notarization still
+        // hanging.
         attestation = await this.config.autoAttest.attest({
           passportId: params.passportId,
           attestationType: attestationForArtifact(params.artifactType),
           dataHash: recordId as Hex32,
+          executionTxHash: receipt.hash as Hex32,
         });
       } catch (err) {
         logger.warn(

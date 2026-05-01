@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export type ThemeId = "vault" | "wax";
@@ -521,7 +523,7 @@ export function NavBar({
         transition: "border-color .3s, background .3s",
       }}
     >
-      <a
+      <Link
         href="/"
         style={{
           display: "flex",
@@ -531,6 +533,7 @@ export function NavBar({
           color: "var(--text)",
         }}
       >
+        {/* <Image src="/logoq.png" alt="Sigil Protocol" width={200} height={50} /> */}
         <SigilMark size={28} />
         <span
           style={{
@@ -542,7 +545,7 @@ export function NavBar({
         >
           Sigil Protocol
         </span>
-      </a>
+      </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" }}>
         {links.map(([label, href]) => (

@@ -57,6 +57,7 @@ export type ChatProgressPhase =
   | 'planning-response'
   | 'running-sealed-inference'
   | 'notarizing-response'
+  | 'attesting-response'
   | 'completed';
 
 export interface ChatProgressEvent {

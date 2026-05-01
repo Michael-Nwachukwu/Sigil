@@ -17,7 +17,7 @@
  * `onlyKeeperRelay` modifier reverts the call.
  */
 
-import { Contract } from 'ethers';
+import { Contract, keccak256, AbiCoder, toUtf8Bytes } from 'ethers';
 import type { JsonRpcProvider, JsonRpcSigner, Wallet } from 'ethers';
 import { awaitTx } from '../utils/waitForReceipt';
 import { logger } from '../utils/logger';
@@ -25,8 +25,11 @@ import { SigilError } from '../utils/errors';
 import { ArtifactType, AttestationType, type Hex32, type PassportId } from '../types/index';
 
 const REGISTRY_ABI = [
+  'function appendFingerprint(bytes32 passportId, bytes32 fingerprintHash, bytes32 executionTxHash) external',
   'function appendAttestation(bytes32 passportId, uint8 attestationType, bool passed, bytes32 dataHash) external',
 ] as const;
+
+const abi = AbiCoder.defaultAbiCoder();
 
 export interface AutoAttestSidecarConfig {
   /** Wallet whose address is registered as a keeper relay on SigilRegistry. */
@@ -47,6 +50,7 @@ export interface AttestationRecord {
   dataHash: Hex32;
   /** True for every attestation produced by this sidecar — see file header. */
   demoSimulated: true;
+  fingerprintTxHash?: string;
 }
 
 /**
@@ -85,6 +89,7 @@ export class AutoAttestSidecar {
     passportId: PassportId;
     attestationType: AttestationType;
     dataHash: Hex32;
+    executionTxHash?: Hex32;
     passed?: boolean;
   }): Promise<AttestationRecord> {
     const passed = params.passed ?? this.defaultPassed;
@@ -92,6 +97,41 @@ export class AutoAttestSidecar {
     if (!provider) {
       throw new SigilError('AutoAttestSidecar: relay signer has no provider');
     }
+    let fingerprintReceiptHash: string | undefined;
+    if (params.executionTxHash) {
+      const fingerprintHash = keccak256(
+        abi.encode(
+          ['bytes32', 'uint8', 'bytes32', 'bytes32'],
+          [
+            params.passportId,
+            params.attestationType,
+            params.dataHash,
+            params.executionTxHash,
+          ],
+        ),
+      ) as Hex32;
+      const fpTx = await this.registry.appendFingerprint(
+        params.passportId,
+        fingerprintHash,
+        params.executionTxHash,
+      );
+      const fpReceipt = await awaitTx(fpTx, provider, {
+        label: 'SigilRegistry.appendFingerprint',
+        timeoutMs: 30_000,
+      });
+      fingerprintReceiptHash = fpReceipt.hash;
+      logger.info(
+        {
+          passportId: params.passportId,
+          fingerprintHash,
+          executionTxHash: params.executionTxHash,
+          txHash: fpReceipt.hash,
+          demoSimulated: true,
+        },
+        'auto-attest: appendFingerprint confirmed',
+      );
+    }
+
     const tx = await this.registry.appendAttestation(
       params.passportId,
       params.attestationType,
@@ -100,6 +140,7 @@ export class AutoAttestSidecar {
     );
     const receipt = await awaitTx(tx, provider, {
       label: 'SigilRegistry.appendAttestation',
+      timeoutMs: 30_000,
     });
     logger.info(
       {
@@ -118,6 +159,7 @@ export class AutoAttestSidecar {
       passed,
       dataHash: params.dataHash,
       demoSimulated: true,
+      fingerprintTxHash: fingerprintReceiptHash,
     };
   }
 }
