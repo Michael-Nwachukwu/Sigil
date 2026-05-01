@@ -12,9 +12,9 @@ const CURL_SEQ: TerminalLine[] = [
   {
     t: 0,
     role: "user",
-    text: "hey hit this endpoint and onboard yourself on to sigil - https://api.sigil.protocol/skill.md",
+    text: "preview: future hosted onboarding flow via https://api.sigil.protocol/skill.md",
   },
-  { t: 1500, role: "agent", text: "Fetching manifest..." },
+  { t: 1500, role: "agent", text: "Reading planned hosted skill document..." },
   { t: 3100, role: "agent", text: "Reading 3 registration steps." },
   { t: 4700, role: "agent", text: "POST /v1/passport/register/request" },
   { t: 6500, role: "system", text: "<- 200   requestId: req_9k2xB7m" },
@@ -46,9 +46,9 @@ const SDK_LINES: TerminalLine[] = [
 ];
 
 const MCP_LINES: TerminalLine[] = [
-  { t: 0, text: "$ codex mcp add sigil --transport sse https://api.sigil.protocol/mcp" },
+  { t: 0, text: "$ preview: codex mcp add sigil --transport sse https://api.sigil.protocol/mcp" },
   { t: 720, text: "" },
-  { t: 1100, text: "Connecting to remote Sigil MCP transport..." },
+  { t: 1100, text: "Previewing future remote Sigil MCP transport..." },
   { t: 1800, text: "Authenticated transport · policy = remote-safe" },
   { t: 2500, text: "Discovered tools:" },
   { t: 3100, text: "  sigil__register_agent()" },
@@ -58,7 +58,7 @@ const MCP_LINES: TerminalLine[] = [
   { t: 5300, text: "" },
   { t: 5800, text: "> notarize_output is hidden on remote transport" },
   { t: 6400, text: "> local agent key stays on the agent runtime" },
-  { t: 7080, text: "MCP session ready · 4 tools exposed" },
+  { t: 7080, text: "Phase 5b target · 4 remote-safe tools exposed" },
 ];
 
 function highlightLine(line: string) {

@@ -9,6 +9,8 @@
     "audit-agent": "tsx scripts/audit-agent.ts",
     "prompt": "tsx scripts/prompt.ts",
     "notarize-output": "tsx scripts/notarize-output.ts",
+    "add-relay": "tsx scripts/add-relay.ts",
+    "chat": "LOG_LEVEL=warn tsx scripts/chat.ts",
     "scenario1": "tsx scenarios/scenario1-identity-resolution.ts",
     "scenario2": "tsx scenarios/scenario2-provenance-notarization.ts",
     "scenario3": "tsx scenarios/scenario3-living-resume.ts",

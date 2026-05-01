@@ -6,11 +6,11 @@ import {
   ARTIFACT_TYPE_LABEL,
   formatTimestamp,
   resolveRecord,
-  shortHex,
   verifyRecord,
   type Hex32,
   type ProvenanceRecord,
 } from "../../lib/sigil-read";
+import { ChainValue } from "../shared/primitives";
 
 type Row = {
   id: Hex32;
@@ -102,7 +102,7 @@ export function RecordsList({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(120px, 160px) 110px 1fr 90px 90px",
+          gridTemplateColumns: "minmax(180px, 240px) 120px minmax(180px, 1fr) 120px 90px",
           gap: 8,
           padding: "0 20px",
         }}
@@ -129,16 +129,32 @@ export function RecordsList({
             <div
               key={`${row.id}-id`}
               style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                color: "var(--accent)",
                 padding: "10px 0",
                 borderBottom: "1px solid var(--border)",
-                cursor: onSelect ? "pointer" : "default",
               }}
-              onClick={() => onSelect?.(row.id)}
             >
-              {shortHex(row.id)}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <ChainValue value={row.id} kind="hash" />
+                {onSelect ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(row.id)}
+                    style={{
+                      width: "fit-content",
+                      padding: "5px 8px",
+                      borderRadius: 999,
+                      border: "1px solid var(--border-strong)",
+                      background: "transparent",
+                      color: "var(--text-2)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      cursor: "pointer",
+                    }}
+                  >
+                    open detail
+                  </button>
+                ) : null}
+              </div>
             </div>
           );
           cells.push(idCell);
@@ -197,15 +213,12 @@ export function RecordsList({
             <div
               key={`${row.id}-output`}
               style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                color: "var(--text-2)",
                 padding: "10px 0",
                 borderBottom: "1px solid var(--border)",
                 wordBreak: "break-all",
               }}
             >
-              {shortHex(row.record.outputHash)}
+              <ChainValue value={row.record.outputHash} kind="hash" color="var(--text-2)" />
             </div>,
             <div
               key={`${row.id}-time`}

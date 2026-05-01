@@ -32,6 +32,7 @@ loadEnv({ path: path.resolve(__dirname, '../../.env') });
 import { ethers } from 'ethers';
 import { SigilClient, ZeroGComputeAdapter, type PassportId } from 'sigil-protocol';
 import { PromptAgent, PROMPT_FIXTURES } from '../agents/PromptAgent';
+import { autoAttestFromEnv, describeAutoAttest } from './_autoAttest';
 
 const FIXTURE_DIR = path.resolve(__dirname, '../.fixtures');
 const FIXTURE_FILE = path.join(FIXTURE_DIR, 'prompt-agent.json');
@@ -307,6 +308,7 @@ async function main() {
   }
 
   header('2. Build agent-side SigilClient + principal-side compute');
+  const autoAttest = autoAttestFromEnv(provider);
   const agentSigil = new SigilClient({
     rpcUrl: rpc as string,
     chainId,
@@ -314,6 +316,7 @@ async function main() {
     notaryAddress: notaryAddress as string,
     signer: agentWallet,
     computeDefaultModel: model,
+    autoAttest,
   });
   const principalCompute = new ZeroGComputeAdapter({
     signer: principal,
@@ -321,6 +324,7 @@ async function main() {
   });
   pass(`notarize signer = ${agentWallet.address} (registered agent)`);
   pass(`compute  signer = ${principal.address} (principal funds inference)`);
+  pass(`auto-attest ${describeAutoAttest(autoAttest)}`);
 
   header(`3. PromptAgent.runPrompt("${promptInput.name}")`);
   const agent = new PromptAgent({
@@ -366,9 +370,15 @@ async function main() {
   pass(`notarizeTx            = ${assessment.notarized.txHash}`);
   pass(`proofRootHash         = ${assessment.notarized.proofRootHash}`);
   pass(`inputContextRootHash  = ${assessment.notarized.inputContextRootHash}`);
+  if (assessment.notarized.attestation) {
+    pass(`attestationTx         = ${assessment.notarized.attestation.txHash} (demo-simulated)`);
+  }
 
   console.log('\n=== Verifiable on-chain ===');
   console.log(`  notarize tx:       ${explorer}/tx/${assessment.notarized.txHash}`);
+  if (assessment.notarized.attestation) {
+    console.log(`  attest tx:         ${explorer}/tx/${assessment.notarized.attestation.txHash}`);
+  }
   console.log(`  notary contract:   ${explorer}/address/${notaryAddress}`);
   console.log(`  registry contract: ${explorer}/address/${registryAddress}`);
 }

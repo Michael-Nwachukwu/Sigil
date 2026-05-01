@@ -84,6 +84,9 @@ importers:
 
   demo/ui:
     dependencies:
+      '@0gfoundation/0g-ts-sdk':
+        specifier: ^1.2.6
+        version: 1.2.6(bufferutil@4.1.0)(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10)
       ethers:
         specifier: ^6.16.0
         version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -148,7 +151,7 @@ packages:
 
   '@0gfoundation/0g-ts-sdk@1.2.6':
     resolution: {integrity: sha512-1CXUnMblQOVJek+T7l+DRn1KuzPmZV6JfMrZbXOihSAPF2er8vFkq519MqoJroUH2yEjdW1z41x5aVPbCSp1gQ==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+    deprecated: This package has moved. Please use @0gfoundation/0g-storage-ts-sdk instead.
     peerDependencies:
       ethers: 6.13.1
 

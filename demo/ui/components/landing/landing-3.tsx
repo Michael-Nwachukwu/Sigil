@@ -5,29 +5,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { NavBar, SigilMark, useThemeState, type NavLink } from "../shared/primitives";
 
 const SKILL_SEQ = [
-  { t: 0, kind: "prompt", text: "$ curl https://api.sigil.protocol/skill.md" },
+  { t: 0, kind: "prompt", text: "$ curl https://sigil.protocol/SKILL.md | less" },
   { t: 700, kind: "blank", text: "" },
   { t: 900, kind: "h1", text: "# SKILL.md - Sigil Protocol" },
   { t: 1100, kind: "h2", text: "## Agent self-registration. No human guidance." },
   { t: 1400, kind: "blank", text: "" },
-  { t: 1600, kind: "step", text: "STEP 1 - Request a PassportID" },
-  { t: 1800, kind: "dim", text: "POST /v1/passport/register/request" },
-  { t: 1950, kind: "code", text: '{ "agentDescription": "DeFi risk scorer",' },
-  { t: 2050, kind: "code", text: '  "principalAddress": "0x7FBb...018f" }' },
-  { t: 2500, kind: "ok", text: '<- 200  { "requestId": "req_9k2xB7m",' },
-  { t: 2650, kind: "ok", text: '       "approvalUrl": "https://.../approve/req_9k2xB7m" }' },
-  { t: 3100, kind: "blank", text: "" },
-  { t: 3200, kind: "step", text: "STEP 2 - Principal approves in browser" },
-  { t: 3400, kind: "dim", text: "GET /v1/passport/register/status/req_9k2xB7m" },
-  { t: 4200, kind: "ok", text: '<- 200  { "status": "approved" }' },
-  { t: 4600, kind: "blank", text: "" },
-  { t: 4700, kind: "step", text: "STEP 3 - Collect credentials (one-time)" },
-  { t: 4900, kind: "ok", text: "  passportId:      0x4a2c...83ca" },
-  { t: 5100, kind: "warn", text: "  agentPrivateKey: [delivered once - store safely]" },
-  { t: 5600, kind: "blank", text: "" },
-  { t: 5700, kind: "sealed", text: "ok  AgentPassport minted - 0G Galileo Testnet" },
-  { t: 5900, kind: "sealed", text: "ok  Manifest encrypted -> 0G Storage KV" },
-  { t: 6100, kind: "sealed", text: "ok  Genesis entry -> 0G Storage Log" },
+  { t: 1600, kind: "step", text: "STEP 1 - Register with persistAs" },
+  { t: 1800, kind: "dim", text: "  await sigil.passport.register({" },
+  { t: 1950, kind: "code", text: '    agentDescription: "DeFi risk scorer",' },
+  { t: 2050, kind: "code", text: '    persistAs: "self",' },
+  { t: 2150, kind: "code", text: "    permissions: { /* ... */ }" },
+  { t: 2300, kind: "dim", text: "  })" },
+  { t: 2700, kind: "ok", text: "<- passportId:      0x4a2c...83ca" },
+  { t: 2900, kind: "warn", text: "<- agentPrivateKey: [returned ONCE - store safely]" },
+  { t: 3300, kind: "blank", text: "" },
+  { t: 3400, kind: "step", text: "STEP 2 - Credential persisted locally" },
+  { t: 3600, kind: "dim", text: "  ~/.sigil/credentials/self.json (mode 0600)" },
+  { t: 3950, kind: "ok", text: "  passportId, agent, principal, registry" },
+  { t: 4150, kind: "ok", text: "  notary, chainId, registeredAt" },
+  { t: 4350, kind: "warn", text: "  (private key NEVER written here)" },
+  { t: 4750, kind: "blank", text: "" },
+  { t: 4850, kind: "step", text: 'STEP 3 - Anyone can ask "who are you?"' },
+  { t: 5050, kind: "prompt", text: "$ npx sigil-agent whoami self" },
+  { t: 5350, kind: "ok", text: "  passportId:   0x4a2c...83ca" },
+  { t: 5500, kind: "ok", text: "  agent:        0x472F...90A1" },
+  { t: 5650, kind: "ok", text: "  principal:    0x7FBb...018f" },
+  { t: 6000, kind: "blank", text: "" },
+  { t: 6100, kind: "sealed", text: "ok  AgentPassport minted - 0G Galileo Testnet" },
+  { t: 6300, kind: "sealed", text: "ok  Manifest encrypted -> 0G Storage KV" },
+  { t: 6500, kind: "sealed", text: "ok  Self-credential ready for runtime read-back" },
 ] as const;
 
 type SkillLine = (typeof SKILL_SEQ)[number];
@@ -207,16 +213,17 @@ export function SkillMdSection() {
             >
               Self-register
               <br />
-              from a single URL.
+              from a single doc.
             </h2>
             <p style={{ color: "var(--text-2)", fontSize: 15, lineHeight: 1.75, marginBottom: 24 }}>
-              Any LLM agent can read SKILL.md and autonomously complete registration. The
-              protocol is designed so a fresh Claude Code session can onboard without human
-              guidance beyond a URL.
+              Today, an existing agent can read this SKILL.md and integrate through the local
+              SDK flow. The hosted `/skill.md` endpoint and registration API are the next
+              onboarding surface, not the current one.
             </p>
             <p style={{ color: "var(--text-2)", fontSize: 15, lineHeight: 1.75, marginBottom: 32 }}>
-              Principal authorizes once in a browser wallet. Agent receives credentials.
-              Every subsequent output is notarized autonomously.
+              Principal authorizes once, stores the agent credentials locally, and every
+              subsequent output can be notarized autonomously. The current repo ships the
+              SDK-first path; the hosted API path is Phase 5b.
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <a href="/skill-md" className="btn btn-primary" style={{ fontSize: 12 }}>
@@ -405,18 +412,18 @@ export function SkillMdPage() {
               {[
                 {
                   n: "01",
-                  title: "Request a PassportID",
-                  body: "POST your agent description and principal address. Sigil returns a requestId and an approval URL.",
+                  title: "Register with persistAs",
+                  body: "One SDK call: sigil.passport.register({ persistAs: \"self\", … }). The principal signs the registration transaction; a fresh agent wallet is minted and bound automatically.",
                 },
                 {
                   n: "02",
-                  title: "Principal approves",
-                  body: "Your human principal connects their wallet at the approval URL and signs once. That is the only human step in the entire agent lifecycle.",
+                  title: "Credential file is written",
+                  body: "Sigil drops ~/.sigil/credentials/self.json with your passportId, agent address, principal, and the registry/notary you registered against. Never the private key — that's returned once and you put it in your secrets manager.",
                 },
                 {
                   n: "03",
-                  title: "Collect credentials",
-                  body: "Poll the status endpoint. On approval, you receive your passportId and agentPrivateKey. The private key is delivered once - store it securely.",
+                  title: "Always know who you are",
+                  body: "Any future invocation can run sigil-agent whoami self (or readCredential('self') from the SDK) to report its on-chain identity back to the operator without rediscovering itself.",
                 },
               ].map((step) => (
                 <div

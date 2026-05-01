@@ -24,6 +24,7 @@ loadEnv({ path: path.resolve(__dirname, '../../.env') });
 import { ethers } from 'ethers';
 import { SigilClient, ZeroGComputeAdapter, type PassportId } from 'sigil-protocol';
 import { RiskScorerAgent } from '../agents/RiskScorerAgent';
+import { autoAttestFromEnv, describeAutoAttest } from './_autoAttest';
 
 const FIXTURE_DIR = path.resolve(__dirname, '../.fixtures');
 const FIXTURE_FILE = path.join(FIXTURE_DIR, 'risk-scorer.json');
@@ -167,6 +168,7 @@ async function main() {
   }
 
   header('2. Build agent-side SigilClient');
+  const autoAttest = autoAttestFromEnv(provider);
   const agentSigil = new SigilClient({
     rpcUrl: rpc as string,
     chainId,
@@ -174,8 +176,10 @@ async function main() {
     notaryAddress: notaryAddress as string,
     signer: agentWallet,
     computeDefaultModel: model,
+    autoAttest,
   });
   pass(`signer = ${agentWallet.address} (the registered agent)`);
+  pass(`auto-attest ${describeAutoAttest(autoAttest)}`);
 
   header('3. Build principal-side ZeroGComputeAdapter');
   // Inference is billed to the principal's funded ledger (3 OG min). The
@@ -216,9 +220,15 @@ async function main() {
   pass(`notarizeTx           = ${assessment.notarized.txHash}`);
   pass(`proofRootHash        = ${assessment.notarized.proofRootHash}`);
   pass(`inputContextRootHash = ${assessment.notarized.inputContextRootHash}`);
+  if (assessment.notarized.attestation) {
+    pass(`attestationTx        = ${assessment.notarized.attestation.txHash} (demo-simulated)`);
+  }
 
   console.log('\n=== Verifiable on-chain ===');
   console.log(`  notarize tx:  ${explorer}/tx/${assessment.notarized.txHash}`);
+  if (assessment.notarized.attestation) {
+    console.log(`  attest tx:    ${explorer}/tx/${assessment.notarized.attestation.txHash}`);
+  }
   console.log(`  notary contract: ${explorer}/address/${notaryAddress}`);
   console.log(`  registry contract: ${explorer}/address/${registryAddress}`);
 }

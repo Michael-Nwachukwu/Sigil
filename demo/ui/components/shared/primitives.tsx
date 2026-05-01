@@ -1,24 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-export type ThemeId = "onyx" | "vault" | "vellum" | "wax" | "blueprint";
-
-type ThemeOption = {
-  id: ThemeId;
-  label: string;
-  swatch: string;
-};
+export type ThemeId = "vault" | "wax";
 
 export type NavLink = [label: string, href: string];
-
-export const THEMES: ThemeOption[] = [
-  { id: "onyx", label: "Onyx & Plasma", swatch: "#8b5cf6" },
-  { id: "vault", label: "Cold Vault", swatch: "#4dd8e0" },
-  { id: "vellum", label: "Cypherpunk Vellum", swatch: "#8b1a10" },
-  { id: "wax", label: "Living Wax", swatch: "#5e1916" },
-  { id: "blueprint", label: "Galileo Blueprint", swatch: "#c8a820" },
-];
 
 export const EXPLORER = "https://chainscan-galileo.0g.ai";
 
@@ -31,14 +17,18 @@ export function applyTheme(id: ThemeId) {
 
 function getSavedTheme(): ThemeId {
   if (typeof window === "undefined") {
-    return "onyx";
+    return "vault";
   }
 
   try {
     const saved = localStorage.getItem("sigil-theme") as ThemeId | null;
-    return saved ?? "onyx";
+    if (saved === "vault" || saved === "wax") {
+      return saved;
+    }
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "vault" : "wax";
   } catch {
-    return "onyx";
+    return "vault";
   }
 }
 
@@ -175,6 +165,176 @@ export function OnChainLink({
   );
 }
 
+export function CopyButton({
+  value,
+  label = "Copy value",
+}: {
+  value: string;
+  label?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) {
+      return;
+    }
+    const id = window.setTimeout(() => setCopied(false), 1200);
+    return () => window.clearTimeout(id);
+  }, [copied]);
+
+  return (
+    <button
+      type="button"
+      aria-label={copied ? "Copied" : label}
+      title={copied ? "Copied" : label}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+        } catch {}
+      }}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 24,
+        height: 24,
+        borderRadius: 999,
+        border: "1px solid var(--border-strong)",
+        background: "var(--bg-elevated)",
+        color: copied ? "var(--ok)" : "var(--text-3)",
+        cursor: "pointer",
+        flexShrink: 0,
+        transition: "border-color .2s, color .2s, transform .15s",
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.borderColor = copied ? "var(--ok)" : "var(--accent)";
+        event.currentTarget.style.color = copied ? "var(--ok)" : "var(--accent)";
+        event.currentTarget.style.transform = "translateY(-1px)";
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.borderColor = "var(--border-strong)";
+        event.currentTarget.style.color = copied ? "var(--ok)" : "var(--text-3)";
+        event.currentTarget.style.transform = "translateY(0)";
+      }}
+    >
+      {copied ? (
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path
+            d="M2.5 6.3L4.8 8.5L9.5 3.8"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : (
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path
+            d="M4.2 4V2.9C4.2 2.4 4.6 2 5.1 2H8.8C9.3 2 9.7 2.4 9.7 2.9V7.6C9.7 8.1 9.3 8.5 8.8 8.5H7.8"
+            stroke="currentColor"
+            strokeWidth="1.1"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <rect
+            x="2.3"
+            y="4"
+            width="5.5"
+            height="6"
+            rx="0.9"
+            stroke="currentColor"
+            strokeWidth="1.1"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function compactValue(value: string, full: boolean): string {
+  if (full || value.includes("...")) {
+    return value;
+  }
+  if (value.startsWith("0x")) {
+    return `0x${value.slice(2, 6)}...${value.slice(-4)}`;
+  }
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+}
+
+export function ChainValue({
+  value,
+  kind = "hash",
+  href,
+  full = false,
+  color = "var(--accent)",
+}: {
+  value?: string | null;
+  kind?: "hash" | "address" | "tx";
+  href?: string;
+  full?: boolean;
+  color?: string;
+}) {
+  if (!value) {
+    return null;
+  }
+
+  const url =
+    href ??
+    (kind === "address"
+      ? `${EXPLORER}/address/${value}`
+      : kind === "tx"
+        ? `${EXPLORER}/tx/${value}`
+        : undefined);
+
+  const display = compactValue(value, full);
+  const node = url ? (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={value}
+      style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        color,
+        textDecoration: "none",
+        borderBottom: "1px dashed var(--border-strong)",
+        wordBreak: "break-all",
+      }}
+    >
+      {display}
+    </a>
+  ) : (
+    <span
+      title={value}
+      style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        color,
+        wordBreak: "break-all",
+      }}
+    >
+      {display}
+    </span>
+  );
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap",
+        minWidth: 0,
+      }}
+    >
+      {node}
+      <CopyButton value={value} label={`Copy ${kind}`} />
+    </span>
+  );
+}
+
 function BadgeShell({
   border,
   background,
@@ -256,136 +416,81 @@ export function UnsealedBadge() {
   );
 }
 
-export function ThemeSwitcher({
+export function ThemeToggle({
   current,
   setCurrent,
 }: {
   current: ThemeId;
   setCurrent: (theme: ThemeId) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const activeTheme = useMemo(
-    () => THEMES.find((theme) => theme.id === current) ?? THEMES[0],
-    [current],
-  );
-
+  const isDark = current === "vault";
+  const nextTheme: ThemeId = isDark ? "wax" : "vault";
   return (
-    <div style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen((value) => !value)}
+    <button
+      onClick={() => setCurrent(nextTheme)}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 11px",
+        background: "var(--bg-elevated)",
+        border: "1px solid var(--border-strong)",
+        borderRadius: 999,
+        cursor: "pointer",
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        letterSpacing: "0.06em",
+        color: "var(--text-2)",
+        transition: "border-color .2s, transform .15s, opacity .2s",
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.borderColor = "var(--accent)";
+        event.currentTarget.style.transform = "translateY(-1px)";
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.borderColor = "var(--border-strong)";
+        event.currentTarget.style.transform = "translateY(0)";
+      }}
+    >
+      <span
         style={{
-          display: "flex",
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          display: "inline-flex",
           alignItems: "center",
-          gap: 6,
-          padding: "6px 12px",
-          background: "var(--bg-elevated)",
-          border: "1px solid var(--border-strong)",
-          borderRadius: 3,
-          cursor: "pointer",
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          letterSpacing: "0.06em",
-          color: "var(--text-2)",
-          transition: "border-color .2s",
-        }}
-        onMouseEnter={(event) => {
-          event.currentTarget.style.borderColor = "var(--accent)";
-        }}
-        onMouseLeave={(event) => {
-          event.currentTarget.style.borderColor = "var(--border-strong)";
+          justifyContent: "center",
+          background: isDark ? "var(--accent-dim)" : "rgba(255,255,255,0.35)",
+          color: isDark ? "var(--accent)" : "var(--accent-2)",
+          flexShrink: 0,
         }}
       >
-        <span
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: activeTheme.swatch,
-            display: "inline-block",
-          }}
-        />
-        Theme
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path
-            d="M2 3.5l3 3 3-3"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
-
-      {open ? (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            right: 0,
-            width: 210,
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-strong)",
-            borderRadius: 4,
-            overflow: "hidden",
-            zIndex: 300,
-            boxShadow: "var(--shadow)",
-          }}
-        >
-          {THEMES.map((theme) => (
-            <button
-              key={theme.id}
-              onClick={() => {
-                setCurrent(theme.id);
-                setOpen(false);
-              }}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 14px",
-                background: current === theme.id ? "var(--accent-dim)" : "transparent",
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                borderBottom: "1px solid var(--border)",
-                transition: "background .15s",
-              }}
-              onMouseEnter={(event) => {
-                if (current !== theme.id) {
-                  event.currentTarget.style.background = "var(--bg-overlay)";
-                }
-              }}
-              onMouseLeave={(event) => {
-                if (current !== theme.id) {
-                  event.currentTarget.style.background = "transparent";
-                }
-              }}
-            >
-              <span
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: "50%",
-                  background: theme.swatch,
-                  flexShrink: 0,
-                  outline: current === theme.id ? "2px solid var(--text)" : "none",
-                  outlineOffset: 2,
-                }}
-              />
-              <span
-                style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: 13,
-                  color: "var(--text)",
-                }}
-              >
-                {theme.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
+        {isDark ? (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path
+              d="M6 1.2v1.6M6 9.2v1.6M1.2 6h1.6M9.2 6h1.6M2.55 2.55l1.1 1.1M8.35 8.35l1.1 1.1M8.35 3.65l1.1-1.1M2.55 9.45l1.1-1.1M6 3.6a2.4 2.4 0 1 0 0 4.8a2.4 2.4 0 0 0 0-4.8Z"
+              stroke="currentColor"
+              strokeWidth="1.1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path
+              d="M9.8 7.2A4.5 4.5 0 0 1 4.8 2.2A4.6 4.6 0 1 0 9.8 7.2Z"
+              stroke="currentColor"
+              strokeWidth="1.1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+      </span>
+      <span>{isDark ? "Light" : "Dark"}</span>
+    </button>
   );
 }
 
@@ -464,7 +569,7 @@ export function NavBar({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <ThemeSwitcher current={theme} setCurrent={setTheme} />
+        <ThemeToggle current={theme} setCurrent={setTheme} />
         {cta ? (
           <a href={cta.href} className="btn btn-primary" style={{ fontSize: 12 }}>
             {cta.label}

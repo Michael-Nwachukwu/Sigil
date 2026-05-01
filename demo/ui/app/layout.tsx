@@ -21,7 +21,7 @@ export default function RootLayout({
   } as CSSProperties;
 
   return (
-    <html lang="en" data-theme="onyx" style={fontVars}>
+    <html lang="en" data-theme="vault" style={fontVars}>
       <body>{children}</body>
     </html>
   );

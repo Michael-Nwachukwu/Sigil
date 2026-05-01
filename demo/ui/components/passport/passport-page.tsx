@@ -50,12 +50,12 @@ export function PassportPage() {
                 marginBottom: 12,
               }}
             >
-              Resolve any identity or artifact.
+              Who is behind this agent? Who signed this artifact?
             </h1>
             <p style={{ fontSize: 15, color: "var(--text-2)", lineHeight: 1.75, maxWidth: 620 }}>
-              Paste a PassportID, ProvenanceRecord ID, agent address, or output hash. Sigil
-              walks the on-chain accountability chain — no auth required, real reads against
-              0G Galileo testnet.
+              Pick the question you want to answer, paste an identifier, and Sigil walks the
+              chain for you. Real reads against 0G Galileo testnet — no wallet, no auth, every
+              answer comes back as plain English plus the underlying on-chain detail.
             </p>
             <div
               style={{

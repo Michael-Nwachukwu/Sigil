@@ -38,6 +38,11 @@ import { SigilError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import type { ZeroGStorageAdapter } from '../adapters/ZeroGStorageAdapter';
 import { deriveSymmetricKeyWithSigner, encryptBytes, decryptBytes } from '../utils/crypto';
+import {
+  AutoAttestSidecar,
+  attestationForArtifact,
+  type AttestationRecord,
+} from '../passport/AutoAttest';
 
 const NOTARY_ABI = [
   'function notarize(bytes32 passportId, bytes32 modelFingerprintHash, string modelId, bytes32 inputContextHash, uint256 inputContextSize, bytes32 outputHash, uint8 artifactType, uint256 nonce, uint256 signedTimestamp, bytes agentSignature, bytes32 executionFingerprintRef) external returns (bytes32)',
@@ -71,6 +76,14 @@ export interface NotarizeResult {
   modelFingerprintHash: Hex32;
   nonce: bigint;
   signedTimestamp: bigint;
+  /**
+   * Present iff the auto-attest sidecar is wired AND the post-notarize
+   * appendAttestation call succeeded. Always `demoSimulated: true` — see
+   * AutoAttest.ts. Sidecar failures are logged at warn level and do NOT
+   * surface as errors here, because the notarization itself is already on
+   * chain at that point.
+   */
+  attestation?: AttestationRecord;
 }
 
 export interface ProvenanceNotaryClientConfig {
@@ -79,6 +92,11 @@ export interface ProvenanceNotaryClientConfig {
   notaryAddress: string;
   chainId: number;
   storage: ZeroGStorageAdapter;
+  /**
+   * Optional auto-attest sidecar. When wired, every successful notarize() is
+   * followed by an `appendAttestation` call from the relay signer. Demo only.
+   */
+  autoAttest?: AutoAttestSidecar;
 }
 
 /**
@@ -89,6 +107,13 @@ export interface ProvenanceNotaryClientConfig {
 export interface ResolvedProvenanceRecord {
   record: ProvenanceRecord;
   proofEnvelope: unknown;
+  /**
+   * Raw model output text, lifted from the v2 provenance envelope. Undefined
+   * for legacy v1 records that only contain the inner sealed-inference proof.
+   */
+  output?: string;
+  /** Envelope schema string ("sigil.provenance-envelope/2" for new records). */
+  envelopeSchema?: string;
   /** Plain-text input context if the caller's signer can derive the key. */
   inputContext?: string;
 }
@@ -119,14 +144,34 @@ export class ProvenanceNotaryClient {
       'input context encrypted + uploaded to 0G Storage',
     );
 
-    const proofString = params.inferenceReceipt.proof;
-    const proofBytes = toUtf8Bytes(proofString);
-    const modelFingerprintHash = keccak256(proofBytes) as Hex32;
-    const proofUpload = await this.config.storage.uploadBytes(proofBytes);
+    // Provenance envelope v2 — wraps the inner sealed-inference proof AND the
+    // raw output bytes. Inlining the output here lets a resolver render the
+    // agent's actual decision (not just the keccak hash) by fetching one blob
+    // from `executionFingerprintRef` and reading `envelope.output`. v1 records
+    // (proof string only) are still on chain from earlier demo runs and remain
+    // verifiable — their resolver path falls back to "output not embedded".
+    let innerProof: unknown;
+    try {
+      innerProof = JSON.parse(params.inferenceReceipt.proof);
+    } catch {
+      innerProof = params.inferenceReceipt.proof;
+    }
+    const envelope = {
+      schema: 'sigil.provenance-envelope/2',
+      proof: innerProof,
+      output: params.output,
+      outputBytes: outputBytes.length,
+      outputContentType: 'text/plain; charset=utf-8',
+      anchoredOutputHash: outputHash,
+    };
+    const envelopeString = JSON.stringify(envelope);
+    const envelopeBytes = toUtf8Bytes(envelopeString);
+    const modelFingerprintHash = keccak256(envelopeBytes) as Hex32;
+    const proofUpload = await this.config.storage.uploadBytes(envelopeBytes);
     const executionFingerprintRef = proofUpload.rootHash as Hex32;
     logger.info(
-      { passportId: params.passportId, rootHash: proofUpload.rootHash },
-      'sealed-inference proof uploaded to 0G Storage',
+      { passportId: params.passportId, rootHash: proofUpload.rootHash, envelopeBytes: envelopeBytes.length },
+      'provenance envelope (v2) uploaded to 0G Storage',
     );
 
     const nonce = (await this.notary.signerNonces(agentAddress)) as bigint;
@@ -189,6 +234,25 @@ export class ProvenanceNotaryClient {
       'artifact notarized on-chain',
     );
 
+    let attestation: AttestationRecord | undefined;
+    if (this.config.autoAttest) {
+      // Best-effort: the notarization is already on chain, so attestation
+      // failures (relay not registered, gas spike, RPC blip) must not throw
+      // back into the agent's hot path.
+      try {
+        attestation = await this.config.autoAttest.attest({
+          passportId: params.passportId,
+          attestationType: attestationForArtifact(params.artifactType),
+          dataHash: recordId as Hex32,
+        });
+      } catch (err) {
+        logger.warn(
+          { err, recordId, passportId: params.passportId },
+          'auto-attest sidecar failed; notarization is still on chain',
+        );
+      }
+    }
+
     return {
       recordId,
       txHash: receipt.hash,
@@ -199,6 +263,7 @@ export class ProvenanceNotaryClient {
       modelFingerprintHash,
       nonce,
       signedTimestamp,
+      attestation,
     };
   }
 
@@ -247,6 +312,27 @@ export class ProvenanceNotaryClient {
       proofEnvelope = proofString;
     }
 
+    // Lift the inlined output from a v2 envelope. v1 records (and any
+    // non-JSON proof) leave `output` undefined.
+    let output: string | undefined;
+    let envelopeSchema: string | undefined;
+    if (proofEnvelope && typeof proofEnvelope === 'object') {
+      const env = proofEnvelope as Record<string, unknown>;
+      if (typeof env.schema === 'string') envelopeSchema = env.schema;
+      if (
+        envelopeSchema === 'sigil.provenance-envelope/2' &&
+        typeof env.output === 'string'
+      ) {
+        const computed = keccak256(toUtf8Bytes(env.output)).toLowerCase();
+        if (computed !== record.outputHash.toLowerCase()) {
+          throw new SigilError(
+            `output bytes tampered: keccak256(envelope.output)=${computed} != record.outputHash=${record.outputHash}`,
+          );
+        }
+        output = env.output;
+      }
+    }
+
     let inputContext: string | undefined;
     try {
       const symKey = await deriveSymmetricKeyWithSigner(this.config.signer, record.passportId);
@@ -267,7 +353,7 @@ export class ProvenanceNotaryClient {
       logger.debug({ err, recordId }, 'input context decryption skipped');
     }
 
-    return { record, proofEnvelope, inputContext };
+    return { record, proofEnvelope, output, envelopeSchema, inputContext };
   }
 
   /**
