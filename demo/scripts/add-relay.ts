@@ -1,21 +1,19 @@
 /**
- * Sigil demo — register the auto-attest sidecar's keeper relay address on
- * SigilRegistry. One-shot, idempotent: re-running with the same key is a
- * cheap no-op (the contract just records `_keeperRelays[relay] = true`
- * again and emits another RelayAdded event).
+ * Sigil demo — register a keeper relay address on SigilRegistry.
+ *
+ * Supports two modes for specifying the relay:
+ *   1. SIGIL_KEEPER_RELAY_ADDRESS   (direct address — use for KeeperHub Para MPC wallet)
+ *   2. SIGIL_KEEPER_RELAY_PRIVATE_KEY (derives address from key — use for local relay wallet)
+ *
+ * SIGIL_KEEPER_RELAY_ADDRESS takes precedence if both are set.
  *
  *   pnpm --filter sigil-demo run add-relay
  *
  * Reads:
- *   - ZERO_G_PRIVATE_KEY            (deployer / contract owner — pays gas)
- *   - SIGIL_KEEPER_RELAY_PRIVATE_KEY (relay key the sidecar will sign with)
+ *   - ZERO_G_PRIVATE_KEY              (deployer / contract owner — pays gas)
+ *   - SIGIL_KEEPER_RELAY_ADDRESS      (relay address — KeeperHub Para MPC wallet)
+ *     OR SIGIL_KEEPER_RELAY_PRIVATE_KEY (relay key — local wallet)
  *   - ZERO_G_RPC_URL, ZERO_G_CHAIN_ID, SIGIL_REGISTRY_ADDRESS
- *
- * Why this exists: AutoAttestSidecar calls `appendAttestation`, which is
- * gated by `onlyKeeperRelay`. Without registering the relay address first,
- * every notarize() in the demo would log a sidecar warning and the
- * counters/reputation on the resolve page would stay at zero. Registering
- * once at setup time fixes that for the rest of the hackathon.
  */
 
 import { config as loadEnv } from 'dotenv';
@@ -43,7 +41,6 @@ async function main() {
   const rpc = requireEnv('ZERO_G_RPC_URL');
   const chainId = Number(process.env.ZERO_G_CHAIN_ID ?? '16602');
   const ownerKey = requireEnv('ZERO_G_PRIVATE_KEY');
-  const relayKey = requireEnv('SIGIL_KEEPER_RELAY_PRIVATE_KEY');
   const registryAddress = requireEnv('SIGIL_REGISTRY_ADDRESS');
   const explorer = process.env.ZERO_G_EXPLORER_URL ?? 'https://chainscan-galileo.0g.ai';
 
@@ -52,15 +49,37 @@ async function main() {
     process.exit(1);
   }
 
+  // Resolve relay address: direct address takes precedence over derived-from-key
+  const relayAddressEnv = process.env.SIGIL_KEEPER_RELAY_ADDRESS;
+  const relayKeyEnv = process.env.SIGIL_KEEPER_RELAY_PRIVATE_KEY;
+
+  let relayAddress: string;
+  if (relayAddressEnv) {
+    if (!isAddress(relayAddressEnv)) {
+      process.stderr.write(`SIGIL_KEEPER_RELAY_ADDRESS is not a valid address: ${relayAddressEnv}\n`);
+      process.exit(1);
+    }
+    relayAddress = relayAddressEnv;
+    process.stdout.write(`  relay source  SIGIL_KEEPER_RELAY_ADDRESS (KeeperHub Para MPC wallet)\n`);
+  } else if (relayKeyEnv) {
+    relayAddress = new Wallet(relayKeyEnv).address;
+    process.stdout.write(`  relay source  SIGIL_KEEPER_RELAY_PRIVATE_KEY (local wallet)\n`);
+  } else {
+    process.stderr.write(
+      `missing relay config — set SIGIL_KEEPER_RELAY_ADDRESS (for KeeperHub Para MPC wallet)\n` +
+        `or SIGIL_KEEPER_RELAY_PRIVATE_KEY (for local relay wallet)\n`,
+    );
+    process.exit(1);
+  }
+
   const provider = new JsonRpcProvider(rpc, chainId, { staticNetwork: true });
   const ownerWallet = new Wallet(ownerKey, provider);
-  const relayWallet = new Wallet(relayKey, provider);
   const registry = new Contract(registryAddress, REGISTRY_ABI, ownerWallet);
 
   process.stdout.write(`\nadd-relay\n`);
   process.stdout.write(`  registry      ${registryAddress}\n`);
   process.stdout.write(`  owner signer  ${ownerWallet.address}\n`);
-  process.stdout.write(`  relay address ${relayWallet.address}\n`);
+  process.stdout.write(`  relay address ${relayAddress}\n`);
 
   const onChainOwner: string = await registry.owner();
   if (onChainOwner.toLowerCase() !== ownerWallet.address.toLowerCase()) {
@@ -71,14 +90,14 @@ async function main() {
     process.exit(1);
   }
 
-  const already: boolean = await registry.isRelay(relayWallet.address);
+  const already: boolean = await registry.isRelay(relayAddress);
   if (already) {
     process.stdout.write(`\n  relay already registered — nothing to do.\n`);
     return;
   }
 
   process.stdout.write(`\n  submitting addRelay…\n`);
-  const tx = await registry.addRelay(relayWallet.address);
+  const tx = await registry.addRelay(relayAddress);
   const receipt = await tx.wait();
   if (!receipt || receipt.status !== 1) {
     process.stderr.write(`addRelay failed (status ${receipt?.status})\n`);
@@ -86,10 +105,16 @@ async function main() {
   }
   process.stdout.write(`  relay added in tx ${explorer}/tx/${receipt.hash}\n`);
 
-  const relayBalance = await provider.getBalance(relayWallet.address);
+  const relayBalance = await provider.getBalance(relayAddress);
   process.stdout.write(
-    `  relay balance ${relayBalance.toString()} wei (fund via faucet if 0; appendAttestation costs gas)\n`,
+    `  relay balance ${relayBalance.toString()} wei\n`,
   );
+  if (relayAddressEnv && relayBalance === 0n) {
+    process.stdout.write(
+      `  NOTE: KeeperHub Para MPC wallet needs OG to pay gas for appendAttestation calls.\n` +
+        `  Send at least 0.05 OG to ${relayAddress} before running the demo.\n`,
+    );
+  }
 }
 
 main().catch((err) => {

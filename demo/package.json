@@ -12,6 +12,7 @@
     "add-relay": "tsx scripts/add-relay.ts",
     "top-up": "tsx scripts/top-up-agent.ts",
     "chat": "LOG_LEVEL=warn tsx scripts/chat.ts",
+    "audit-chat": "tsx scripts/audit-chat.ts",
     "scenario1": "tsx scenarios/scenario1-identity-resolution.ts",
     "scenario2": "tsx scenarios/scenario2-provenance-notarization.ts",
     "scenario3": "tsx scenarios/scenario3-living-resume.ts",

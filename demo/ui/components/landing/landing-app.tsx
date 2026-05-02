@@ -8,7 +8,7 @@ import { LandingFooter, SkillMdSection } from "./landing-3";
 const navLinks: NavLink[] = [
   ["Primitives", "#primitives"],
   ["How it works", "#how"],
-  ["SDK", "#sdk"],
+  ["Docs", "/docs"],
   ["Resolve", "/passport"],
 ];
 
@@ -17,7 +17,7 @@ export function LandingApp() {
 
   return (
     <>
-      <NavBar links={navLinks} theme={theme} setTheme={setTheme} cta={{ href: "/skill-md", label: "Read the docs" }} />
+      <NavBar links={navLinks} theme={theme} setTheme={setTheme} cta={{ href: "/docs", label: "Documentation" }} />
       <main style={{ paddingTop: 56 }}>
         <LandingHero />
         <div id="primitives">

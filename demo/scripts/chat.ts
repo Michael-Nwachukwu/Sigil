@@ -31,6 +31,11 @@ import fs from 'node:fs';
 import readline from 'node:readline';
 loadEnv({ path: path.resolve(__dirname, '../../.env') });
 
+// Pino writes via SonicBoom directly to file descriptors and bypasses the
+// process.stdout/stderr capture this REPL uses to render clean turns. Force
+// error level so info/warn lines never leak as JSON between prompts.
+process.env.LOG_LEVEL = 'error';
+
 import { ethers } from 'ethers';
 import {
   AttestationType,
@@ -106,38 +111,73 @@ function requireEnv(key: string): string {
   return v;
 }
 
+// ---------------------------------------------------------------------------
+// Terminal colors (ANSI — no external dep needed)
+// ---------------------------------------------------------------------------
+const R = '\x1b[0m';  // reset
+const DIM = '\x1b[2m';
+const BOLD = '\x1b[1m';
+const RED = '\x1b[31m';
+const GREEN = '\x1b[32m';
+const YELLOW = '\x1b[33m';
+const BLUE = '\x1b[34m';
+const MAGENTA = '\x1b[35m';
+const CYAN = '\x1b[36m';
+const BWHITE = '\x1b[97m';
+const BGREEN = '\x1b[92m';
+const BCYAN = '\x1b[96m';
+
+function label(s: string): string {
+  return `${DIM}${s}${R}`;
+}
+function val(s: string): string {
+  return `${BCYAN}${s}${R}`;
+}
+function link(s: string): string {
+  return `${BLUE}${s}${R}`;
+}
+function sep(): string {
+  return `${DIM}${'─'.repeat(60)}${R}`;
+}
+
 function printIdentity(args: {
   passportId: string;
   agentAddress: string;
   principal: string;
   description?: string;
 }) {
-  process.stdout.write(`  passportId  ${args.passportId}\n`);
-  process.stdout.write(`  agent       ${args.agentAddress}\n`);
-  process.stdout.write(`  principal   ${args.principal}\n`);
-  if (args.description) process.stdout.write(`  description ${args.description}\n`);
+  const w = process.stdout.write.bind(process.stdout);
+  w(`  ${label('passportId')}  ${val(args.passportId)}\n`);
+  w(`  ${label('agent      ')}  ${CYAN}${args.agentAddress}${R}\n`);
+  w(`  ${label('principal  ')}  ${DIM}${args.principal}${R}\n`);
+  if (args.description) w(`  ${label('description')}  ${DIM}${args.description}${R}\n`);
 }
 
-function printTurn(turn: ChatTurn, explorer: string) {
-  process.stdout.write(`\n${turn.output.trim()}\n\n`);
-  const verified =
-    turn.verified === true
-      ? 'TEE verified'
-      : turn.verified === false
-        ? 'TEE unverified'
-        : 'TEE unknown';
-  process.stdout.write(`  recordId    ${turn.notarized.recordId}\n`);
-  process.stdout.write(`  outputHash  ${turn.notarized.outputHash}\n`);
-  process.stdout.write(`  notarizeTx  ${explorerTx(explorer, turn.notarized.txHash)}\n`);
-  process.stdout.write(`  ${verified}\n`);
+function printTurn(turn: ChatTurn, explorer: string, elapsed: string) {
+  const w = process.stdout.write.bind(process.stdout);
+  w(`\n${sep()}\n`);
+  w(`${BWHITE}${turn.output.trim()}${R}\n`);
+  w(`${sep()}\n\n`);
+
+  w(`  ${label('recordId  ')}  ${val(turn.notarized.recordId)}\n`);
+  w(`  ${label('outputHash')}  ${val(turn.notarized.outputHash)}\n`);
+  w(`  ${label('notarizeTx')}  ${link(explorerTx(explorer, turn.notarized.txHash))}\n`);
+
   const att = turn.notarized.attestation;
   if (att) {
-    process.stdout.write(
-      `  attestTx    ${explorerTx(explorer, att.txHash)} (${AttestationType[att.attestationType]} ${
-        att.passed ? 'passed' : 'failed'
-      } · demo-simulated)\n`,
+    w(
+      `  ${label('attestTx  ')}  ${link(explorerTx(explorer, att.txHash))} ` +
+      `${DIM}(${AttestationType[att.attestationType]} ${att.passed ? `${BGREEN}passed${R}${DIM}` : `${RED}failed${R}${DIM}`} · demo-simulated)${R}\n`,
     );
   }
+
+  const teeStr =
+    turn.verified === true
+      ? `${BGREEN}✓ TEE verified${R}`
+      : turn.verified === false
+        ? `${YELLOW}⚠ TEE unverified${R}`
+        : `${DIM}TEE unknown${R}`;
+  w(`  ${teeStr}  ${DIM}${elapsed}s${R}\n\n`);
 }
 
 type WriteFn = typeof process.stdout.write;
@@ -211,15 +251,15 @@ function printTrace(trace: string): void {
 function phaseLabel(event: ChatProgressEvent): string {
   switch (event.phase) {
     case 'planning-response':
-      return 'planning response...';
+      return `${YELLOW}⟳${R} ${DIM}planning response...${R}`;
     case 'running-sealed-inference':
-      return 'running sealed inference...';
+      return `${YELLOW}⟳${R} ${DIM}running sealed inference...${R}`;
     case 'notarizing-response':
-      return 'notarizing response...';
+      return `${YELLOW}⟳${R} ${DIM}notarizing response...${R}`;
     case 'attesting-response':
-      return 'attesting response...';
+      return `${YELLOW}⟳${R} ${DIM}appending fingerprint + attestation...${R}`;
     case 'completed':
-      return 'response notarized.';
+      return `${BGREEN}✓${R} ${DIM}response notarized${R}`;
   }
 }
 
@@ -241,10 +281,13 @@ async function main() {
   const principal = new ethers.Wallet(principalKey, provider);
   const agentWallet = new ethers.Wallet(fixture.agentPrivateKey, provider);
 
-  // Auto-attest sidecar — only enabled if the relay key is set in the env
-  // AND the demo operator has registered that address with `add-relay`.
-  // Falls back silently to "no sidecar" so the chat still works on a fresh
-  // checkout without setup.
+  // Auto-attest sidecar selection. Direct mode is preferred when a relay
+  // private key is set: the chat owns the keypair, signs locally, and gets a
+  // confirmed tx hash back without depending on KeeperHub workflow plumbing.
+  // KeeperHub workflow mode stays in the SDK for future use but is not used
+  // here — the Webhook trigger doesn't receive body via the execute API, so
+  // the workflow rejects every call as "passportId missing". See
+  // sdk/src/passport/AutoAttest.ts for the open issue.
   const relayKey = process.env.SIGIL_KEEPER_RELAY_PRIVATE_KEY;
   const relayWallet = relayKey ? new ethers.Wallet(relayKey, provider) : undefined;
 
@@ -267,7 +310,7 @@ async function main() {
     signer: agentWallet,
     computeDefaultModel: model,
     autoAttest: relayWallet
-      ? { relaySigner: relayWallet, defaultPassed: true }
+      ? { mode: 'direct', relaySigner: relayWallet, defaultPassed: true }
       : undefined,
   });
   const principalCompute = new ZeroGComputeAdapter({
@@ -288,20 +331,22 @@ async function main() {
     model,
   });
 
-  process.stdout.write(`\nSigil chat — agent "${args.name}"\n`);
+  const w = process.stdout.write.bind(process.stdout);
+  w(`\n${BOLD}${CYAN}Sigil${R} ${BOLD}chat${R}  ${DIM}agent "${args.name}"${R}\n`);
+  w(`${DIM}${'─'.repeat(60)}${R}\n`);
   printIdentity({
     passportId: fixture.passportId,
     agentAddress: fixture.agentAddress,
     principal: principal.address,
     description,
   });
-  process.stdout.write(`  model       ${model}\n`);
-  process.stdout.write(`  notary      ${notaryAddress}\n`);
-  process.stdout.write(
-    `  auto-attest ${
+  w(`  ${label('model      ')}  ${DIM}${model}${R}\n`);
+  w(`  ${label('notary     ')}  ${DIM}${notaryAddress}${R}\n`);
+  w(
+    `  ${label('auto-attest')}  ${
       relayWallet
-        ? `ON (relay ${relayWallet.address}) — DEMO SIMULATOR`
-        : 'OFF (set SIGIL_KEEPER_RELAY_PRIVATE_KEY + run add-relay to enable)'
+        ? `${MAGENTA}ON direct${R} ${DIM}(relay ${relayWallet.address}) — DEMO SIMULATOR${R}`
+        : `${DIM}OFF${R}`
     }\n`,
   );
 
@@ -311,17 +356,18 @@ async function main() {
   // Catch it up front instead.
   const agentBal = await provider.getBalance(agentWallet.address);
   const minAgentBal = ethers.parseEther('0.01');
-  process.stdout.write(`  balance     ${ethers.formatEther(agentBal)} OG\n`);
+  const balStr = ethers.formatEther(agentBal);
+  w(
+    `  ${label('balance    ')}  ${agentBal < minAgentBal ? RED : BGREEN}${balStr} OG${R}\n`,
+  );
   if (agentBal < minAgentBal) {
-    process.stdout.write(
-      `\n  WARNING: agent wallet is low — each turn needs ~0.005 OG for 0G Storage fees.\n` +
-        `  top up before chatting:\n` +
-        `    pnpm --filter sigil-demo run top-up -- --name ${args.name} --amount 0.1\n`,
+    w(
+      `\n  ${YELLOW}⚠ agent wallet low${R} ${DIM}— each turn needs ~0.005 OG for 0G Storage fees${R}\n` +
+        `  ${DIM}top up:  pnpm --filter sigil-demo run top-up -- --name ${args.name} --amount 0.1${R}\n`,
     );
   }
-  process.stdout.write(
-    `\nType a task in plain English. /help for commands. /exit (or Ctrl-D) to quit.\n\n`,
-  );
+  w(`${DIM}${'─'.repeat(60)}${R}\n`);
+  w(`${DIM}Type anything to chat. /help for commands. Ctrl-D to quit.${R}\n\n`);
 
   let lastTurn: ChatTurn | null = null;
   let lastTrace = '';
@@ -332,7 +378,7 @@ async function main() {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: '> ',
+    prompt: `${CYAN}>${R} `,
   });
   rl.prompt();
 
@@ -343,7 +389,7 @@ async function main() {
       return;
     }
     if (busy) {
-      process.stdout.write('  (busy — wait for the previous turn to finish)\n');
+      process.stdout.write(`  ${YELLOW}busy — wait for the previous turn to finish${R}\n`);
       return;
     }
 
@@ -354,13 +400,13 @@ async function main() {
         case 'h':
         case '?':
           process.stdout.write(
-            `\nCommands:\n` +
-              `  /whoami    print agent passport, address, principal\n` +
-              `  /last      show the most recent notarization\n` +
-              `  /trace     toggle raw trace output on/off\n` +
-              `  /last-trace show the raw trace from the previous turn\n` +
-              `  /help      this list\n` +
-              `  /exit      quit\n\n`,
+            `\n${BOLD}Commands${R}\n` +
+              `  ${CYAN}/whoami${R}      ${DIM}print agent passport, address, principal${R}\n` +
+              `  ${CYAN}/last${R}        ${DIM}show the most recent notarization${R}\n` +
+              `  ${CYAN}/trace${R}       ${DIM}toggle raw trace output on/off${R}\n` +
+              `  ${CYAN}/last-trace${R}  ${DIM}show the raw trace from the previous turn${R}\n` +
+              `  ${CYAN}/help${R}        ${DIM}this list${R}\n` +
+              `  ${CYAN}/exit${R}        ${DIM}quit${R}\n\n`,
           );
           break;
         case 'whoami':
@@ -376,16 +422,15 @@ async function main() {
           break;
         case 'last':
           if (!lastTurn) {
-            process.stdout.write('\n  no notarizations yet in this session.\n\n');
+            process.stdout.write(`\n  ${DIM}no notarizations yet in this session.${R}\n\n`);
           } else {
-            printTurn(lastTurn, explorer);
-            process.stdout.write('\n');
+            printTurn(lastTurn, explorer, '—');
           }
           break;
         case 'trace':
           traceMode = !traceMode;
           process.stdout.write(
-            `\n  raw trace ${traceMode ? 'enabled' : 'hidden'} for future turns.\n\n`,
+            `\n  ${DIM}raw trace ${traceMode ? 'enabled' : 'hidden'} for future turns.${R}\n\n`,
           );
           break;
         case 'last-trace':
@@ -397,7 +442,7 @@ async function main() {
           rl.close();
           return;
         default:
-          process.stdout.write(`\n  unknown command: /${cmd}  (try /help)\n\n`);
+          process.stdout.write(`\n  ${RED}unknown command:${R} /${cmd}  ${DIM}(try /help)${R}\n\n`);
       }
       rl.prompt();
       return;
@@ -405,15 +450,6 @@ async function main() {
 
     busy = true;
     const start = Date.now();
-    process.stdout.write(`  planning response...\n`);
-    const attestationHint =
-      relayWallet != null
-        ? setTimeout(() => {
-            if (busy) {
-              process.stdout.write(`  attesting response...\n`);
-            }
-          }, 20_000)
-        : null;
     try {
       const { result: turn, trace } = await captureProcessTrace(() =>
         agent.ask(line, {
@@ -425,31 +461,27 @@ async function main() {
       lastTurn = turn;
       lastTrace = trace;
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-      printTurn(turn, explorer);
+      printTurn(turn, explorer, elapsed);
       if (traceMode) {
         printTrace(trace);
       } else {
         const lines = traceLineCount(trace);
         if (lines > 0) {
           process.stdout.write(
-            `  raw trace hidden (${lines} lines) — use /last-trace to inspect or /trace to always show it.\n`,
+            `  ${DIM}raw trace hidden (${lines} lines) — /last-trace to inspect · /trace to always show${R}\n\n`,
           );
         }
       }
-      process.stdout.write(`  (${elapsed}s)\n\n`);
     } catch (err) {
-      process.stdout.write(`\n  ERROR: ${(err as Error).message}\n\n`);
+      process.stdout.write(`\n  ${RED}ERROR:${R} ${(err as Error).message}\n\n`);
     } finally {
-      if (attestationHint != null) {
-        clearTimeout(attestationHint);
-      }
       busy = false;
       rl.prompt();
     }
   });
 
   rl.on('close', () => {
-    process.stdout.write('\nbye.\n');
+    process.stdout.write(`\n${DIM}bye.${R}\n`);
     process.exit(0);
   });
 }

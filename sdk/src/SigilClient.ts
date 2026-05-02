@@ -28,16 +28,34 @@ export interface SigilClientOptions extends SigilClientConfig {
   storageIndexerUrl?: string;
   /**
    * Opt-in auto-attest sidecar — DEMO ONLY. When set, every successful
-   * `provenance.notarize()` is followed by a relay-signed
-   * `appendAttestation` so the agent's reputation/taskCount move in real
-   * time. Production keepers attach attestations out-of-band.
+   * `provenance.notarize()` is followed by an `appendAttestation` call
+   * so the agent's reputation/taskCount move in real time.
+   *
+   * Two modes:
+   *   - direct: a local relay wallet signs on-chain directly (legacy)
+   *   - keeperhub: posts to KeeperHub workflow (Para MPC wallet signs)
+   *
+   * Production keepers attach attestations out-of-band after real verification.
    */
-  autoAttest?: {
-    /** Wallet whose address has been added as a keeper relay on-chain. */
-    relaySigner: SigilSigner;
-    /** Mark every attestation passed (default true). */
-    defaultPassed?: boolean;
-  };
+  autoAttest?:
+    | {
+        mode?: 'direct';
+        /** Wallet whose address has been added as a keeper relay on-chain. */
+        relaySigner: SigilSigner;
+        /** Mark every attestation passed (default true). */
+        defaultPassed?: boolean;
+      }
+    | {
+        mode: 'keeperhub';
+        /** KEEPERHUB_API_KEY */
+        apiKey: string;
+        /** Workflow ID from KeeperHub (KEEPERHUB_WORKFLOW_ID) */
+        workflowId: string;
+        /** Defaults to https://app.keeperhub.com */
+        apiBaseUrl?: string;
+        /** Mark every attestation passed (default true). */
+        defaultPassed?: boolean;
+      };
 }
 
 const DEFAULT_INDEXER_URL = 'https://indexer-storage-testnet-turbo.0g.ai';
@@ -67,13 +85,29 @@ export class SigilClient {
       registryAddress: options.registryAddress,
       storage: this.storage,
     });
-    const autoAttest = options.autoAttest
-      ? new AutoAttestSidecar({
-          relaySigner: options.autoAttest.relaySigner,
+    let autoAttest: AutoAttestSidecar | undefined;
+    if (options.autoAttest) {
+      const ao = options.autoAttest;
+      if (ao.mode === 'keeperhub') {
+        autoAttest = new AutoAttestSidecar({
+          mode: 'keeperhub',
+          keeperHub: {
+            apiKey: ao.apiKey,
+            workflowId: ao.workflowId,
+            apiBaseUrl: ao.apiBaseUrl,
+          },
           registryAddress: options.registryAddress,
-          defaultPassed: options.autoAttest.defaultPassed,
-        })
-      : undefined;
+          defaultPassed: ao.defaultPassed,
+        });
+      } else {
+        autoAttest = new AutoAttestSidecar({
+          mode: 'direct',
+          relaySigner: (ao as { relaySigner: SigilSigner }).relaySigner,
+          registryAddress: options.registryAddress,
+          defaultPassed: ao.defaultPassed,
+        });
+      }
+    }
     this.provenance = new ProvenanceNotaryClient({
       signer: options.signer,
       notaryAddress: options.notaryAddress,
