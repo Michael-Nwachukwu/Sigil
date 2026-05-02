@@ -8,17 +8,17 @@
  *    `SIGIL_KEEPER_RELAY_PRIVATE_KEY` and the address registered on-chain
  *    via `SigilRegistry.addRelay()`.
  *
- * 2. **KeeperHub workflow mode** (currently broken — kept for future work):
- *    posts to KeeperHub's REST API, which executes the "Sigil Attest"
- *    workflow using the Para MPC wallet registered as a keeper relay.
- *    Open issue: the workflow's Webhook trigger does NOT receive request
- *    body when fired via `/api/workflow/{id}/execute`, so every call is
- *    rejected with "passportId: bytes32 is missing". Two paths forward:
- *      a) replace the workflow trigger with a Manual trigger that accepts
- *         input through the execute API
- *      b) bypass workflows entirely and call `/api/execute/contract-call`
- *         directly (endpoint exists; needs a stable status-poll endpoint)
- *    Until either is done, do not use this mode for live demos.
+ * 2. **KeeperHub workflow mode** (blocked by KeeperHub infra issue on 0G):
+ *    posts to KeeperHub's REST API to execute the "Sigil Attest" workflow.
+ *    The trigger was fixed (Webhook → Manual), input resolves correctly, and
+ *    the workflow fires. However the `web3/write-contract` step times out
+ *    after 5 minutes with "Step did not record completion" — the Para MPC
+ *    wallet nonce stays 0, meaning no tx was ever submitted to 0G Galileo.
+ *    0G Galileo is listed as a supported network in KeeperHub's dashboard
+ *    but their write-contract step handler appears to not handle 0G's
+ *    RPC/block-time characteristics correctly. Filed with KeeperHub support.
+ *    When fixed on their side, re-enable this mode in chat.ts — no SDK
+ *    changes required. Until then, use direct mode for live demos.
  *
  * In both modes the sidecar marks every attestation `passed = true` — there
  * is no real off-chain verification happening. This is the demo simulator.
