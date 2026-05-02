@@ -1,8 +1,8 @@
 # Sigil Protocol — Integration Guide
 
 > **BASE_URL** in this document refers to the URL where this file was served.
-> If this document was fetched from `https://example.com/SKILL.md`, then
-> `BASE_URL = https://example.com`. Substitute it in all API examples below.
+> If this document was fetched from `https://sigiltwoelves.vercel.app/SKILL.md`, then
+> `BASE_URL = https://sigiltwoelves.vercel.app`. Substitute it in all API examples below.
 
 ---
 
