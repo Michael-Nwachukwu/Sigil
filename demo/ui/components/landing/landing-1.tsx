@@ -612,9 +612,7 @@ export function LandingHero() {
             maxWidth: 760,
           }}
         >
-          A passport for every
-          <br />
-          autonomous agent.
+          A passport for every autonomous agent.
         </h1>
 
         <p

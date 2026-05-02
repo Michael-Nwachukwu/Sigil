@@ -1,0 +1,12 @@
+{
+  "name": "sigil-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sigil Protocol registration API — served via the Next.js app (demo/ui). See demo/ui/app/api/v1/passport/ for the route handlers.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "echo 'API endpoints are served by the Next.js app in demo/ui. Run: cd demo/ui && pnpm dev'",
+    "build": "echo 'No separate build — API is part of demo/ui Next.js app'",
+    "start": "echo 'Start the Next.js app: cd demo/ui && pnpm start'"
+  }
+}

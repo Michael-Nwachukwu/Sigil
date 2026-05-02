@@ -167,8 +167,10 @@ sigil-protocol/
 │   ├── scripts/        CLI runners + chat REPL + top-up-agent
 │   ├── scenarios/      scenario1 (identity), scenario2 (provenance), scenario3 (living resume)
 │   └── ui/             Next.js resolver + landing + /skill-md
+├── api/                Stub package (API endpoints live in demo/ui/app/api/v1/)
+├── mcp-server/         Standalone MCP server (5 tools, stdio transport)
 ├── deployments/        galileo-testnet.json (contract addresses, never gitignored)
-├── public/SKILL.md     local agent onboarding document
+├── public/SKILL.md     agent onboarding document (3 integration paths)
 └── PROJECT_STATE.md    live build log
 ```
 
@@ -265,10 +267,11 @@ pnpm --filter sigil-demo run prompt         # Generic sealed-inference agent
 pnpm --filter sigil-demo run notarize-output # Notarize an output from any external LLM
 ```
 
-### 3 · Interactive Chat REPL
+### 3 · Interactive REPLs
 
 ```bash
-pnpm --filter sigil-demo run chat -- --name prompt-agent
+pnpm --filter sigil-demo run chat -- --name prompt-agent   # Chat REPL (notarizes every reply)
+pnpm --filter sigil-demo run audit-chat                    # Smart contract audit REPL
 ```
 
 Every reply runs sealed inference on 0G Compute and notarizes the response on-chain. The terminal prints `recordId`, `outputHash`, and a live explorer link for each turn.
@@ -286,7 +289,38 @@ REPL commands:
 - `/trace` — toggle persistent raw trace mode
 - `/exit` — quit
 
-### 4 · Demo Scenarios
+### 4 · Agent Registration via Browser Approval
+
+External agents that don't have SDK access can self-register via the hosted API:
+
+1. The agent POSTs to `/api/v1/passport/register/request` with its principal address and permissions.
+2. The API returns a `requestId`, a pre-generated `agentAddress`, and an `approvalUrl`.
+3. The principal visits `approvalUrl` (served by the Next.js app at `/approve/:requestId`), connects their wallet, and signs the on-chain `register()` transaction.
+4. The agent polls `/api/v1/passport/register/status/:requestId` and receives the `passportId` and `agentPrivateKey` (delivered exactly once after approval).
+
+The API endpoints are served by the Next.js app — start it with `pnpm --filter sigil-demo-ui run dev`.
+
+### 5 · MCP Server
+
+For Claude Code / Claude Desktop integrations:
+
+```bash
+# Build
+pnpm --filter sigil-mcp-server run build
+
+# Run
+ZERO_G_RPC_URL=https://evmrpc-testnet.0g.ai \
+SIGIL_REGISTRY_ADDRESS=0x2C0457F82B57148e8363b4589bb3294b23AE7625 \
+PROVENANCE_NOTARY_ADDRESS=0xA1103E6490ab174036392EbF5c798C9DaBAb24EE \
+SIGIL_AGENT_PRIVATE_KEY=0x... \
+node mcp-server/dist/index.js
+```
+
+Or add to `claude_desktop_config.json` — see `public/SKILL.md` for the full config snippet.
+
+Available tools: `sigil__register_agent`, `sigil__resolve_agent`, `sigil__notarize_output`, `sigil__resolve_provenance`, `sigil__verify_agent`.
+
+### 6 · Demo Scenarios
 
 ```bash
 pnpm --filter sigil-demo run scenario1   # Identity resolution — read-only walk of all agents
@@ -350,8 +384,9 @@ In production, an independent keeper relay would verify agent outputs off-chain 
 | Demo scenarios 1–3 | Working |
 | Resolver UI (`/passport`) | Live reads from chain |
 | Contract source verification | In progress |
-| API onboarding server | Not started |
-| MCP server | Not started |
+| API onboarding server | Live (Next.js routes in `demo/ui/app/api/v1/`) |
+| Agent approval page | Live (`/approve/:requestId` in Next.js app) |
+| MCP server | Complete (5 tools, stdio transport) |
 | SDK npm publish | Not started |
 
 ---
