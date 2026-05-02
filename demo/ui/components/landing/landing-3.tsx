@@ -380,7 +380,7 @@ export function SkillMdPage() {
               color: "var(--accent)",
             }}
           >
-            curl https://api.sigil.protocol/skill.md
+            curl https://sigiltwoelves.vercel.app/SKILL.md
           </div>
         </div>
 

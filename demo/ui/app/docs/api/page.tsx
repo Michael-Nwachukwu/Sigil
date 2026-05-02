@@ -21,7 +21,7 @@ export default function ApiPage() {
       <H2 id="base">Base URL</H2>
       <CodeBlock lang="bash">
 {`BASE_URL=http://localhost:3000   # development
-BASE_URL=https://your-domain.xyz # production`}
+BASE_URL==https://sigiltwoelves.vercel.app # production`}
       </CodeBlock>
 
       {/* Flow overview */}
@@ -232,11 +232,11 @@ BASE_URL=https://your-domain.xyz # production`}
         rows={[
           { name: "IP rate limit", type: "5 / hour", desc: "Max 5 new registration requests per IP address per hour." },
           { name: "Principal limit", type: "10 active", desc: "Max 10 pending (unapproved) registrations per principal address at any time." },
-          { name: "TTL", type: "24 hours", desc: "Pending registrations expire after 24 hours if not approved. The in-memory store is swept every 60 seconds." },
+          { name: "TTL", type: "24 hours", desc: "Pending registrations expire after 24 hours if not approved. Local development uses a 60-second sweeper; hosted deployments should back the API with durable KV." },
         ]}
       />
       <Callout type="warn">
-        The registration store is in-memory. A server restart wipes all pending requests. In production, use a durable store (Redis, Postgres). For the hackathon demo, pending requests survive for the server process lifetime.
+        Hosted/serverless deployments should set <Code>KV_REST_API_URL</Code> and <Code>KV_REST_API_TOKEN</Code> (or the raw Upstash equivalents) so the request, approve, and status routes share durable state across instances. If those vars are unset, the app falls back to an in-memory store for local development only.
       </Callout>
 
       {/* static files */}

@@ -8,23 +8,28 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { store } from "../../../../../../../lib/registration-store";
+import {
+  consumeApprovedPrivateKey,
+  deleteRegistration,
+  getRegistration,
+} from "../../../../../../../lib/registration-store";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { requestId: string } },
 ) {
   const { requestId } = params;
-  const reg = store.get(requestId);
+  const reg = await getRegistration(requestId);
 
   if (!reg) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   if (reg.expiresAt < Date.now() && reg.status === "pending") {
-    store.delete(requestId);
+    await deleteRegistration(requestId, reg.principalAddress);
     return NextResponse.json({ error: "Request expired" }, { status: 410 });
   }
 
@@ -43,13 +48,13 @@ export async function GET(
   // Approved — deliver private key exactly once
   if (reg.status === "approved") {
     if (!reg.keyDelivered) {
-      reg.keyDelivered = true;
+      const agentPrivateKey = await consumeApprovedPrivateKey(requestId);
       return NextResponse.json({
         status: "approved",
         requestId,
         passportId: reg.passportId,
         agentAddress: reg.agentAddress,
-        agentPrivateKey: reg.agentPrivateKey,
+        ...(agentPrivateKey ? { agentPrivateKey } : {}),
         approvalTxHash: reg.approvalTxHash,
       });
     }

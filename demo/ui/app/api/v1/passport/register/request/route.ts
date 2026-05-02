@@ -18,16 +18,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Wallet } from "ethers";
 import {
-  store,
   generateRequestId,
+  generateNonceHex,
   computePassportId,
   computePermissionManifestHash,
+  createPendingRegistration,
   checkRateLimit,
   countPendingForPrincipal,
   type PermissionSpec,
 } from "../../../../../../lib/registration-store";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -39,7 +41,7 @@ function getClientIp(req: NextRequest): string {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  if (!checkRateLimit(ip)) {
+  if (!(await checkRateLimit(ip))) {
     return NextResponse.json(
       { error: "Rate limit exceeded: max 5 registration requests per IP per hour" },
       { status: 429 },
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "permissions object is required" }, { status: 400 });
   }
 
-  if (countPendingForPrincipal(principalAddress) >= 10) {
+  if ((await countPendingForPrincipal(principalAddress)) >= 10) {
     return NextResponse.json(
       { error: "Too many pending registrations for this principal (max 10)" },
       { status: 429 },
@@ -91,9 +93,7 @@ export async function POST(req: NextRequest) {
   const agentPrivateKey = agentWallet.privateKey;
 
   // Pre-compute a nonce for passportId derivation
-  const nonceBuf = Buffer.allocUnsafe(32);
-  for (let i = 0; i < 32; i++) nonceBuf[i] = Math.floor(Math.random() * 256);
-  const nonce = nonceBuf.toString("hex");
+  const nonce = generateNonceHex();
 
   const passportId = computePassportId(principalAddress, agentAddress, nonce);
   const permissionManifestHash = computePermissionManifestHash(
@@ -105,20 +105,22 @@ export async function POST(req: NextRequest) {
   const now = Date.now();
   const expiresAt = now + 24 * 60 * 60 * 1000;
 
-  store.set(requestId, {
-    requestId,
-    principalAddress,
-    agentAddress,
+  await createPendingRegistration(
+    {
+      requestId,
+      principalAddress,
+      agentAddress,
+      agentDescription,
+      permissions: permissions as PermissionSpec,
+      passportId,
+      permissionManifestHash,
+      status: "pending",
+      createdAt: now,
+      expiresAt,
+      keyDelivered: false,
+    },
     agentPrivateKey,
-    agentDescription,
-    permissions: permissions as PermissionSpec,
-    passportId,
-    permissionManifestHash,
-    status: "pending",
-    createdAt: now,
-    expiresAt,
-    keyDelivered: false,
-  });
+  );
 
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ??

@@ -14,16 +14,21 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyMessage } from "ethers";
-import { store } from "../../../../../../lib/registration-store";
+import {
+  deleteRegistration,
+  getRegistration,
+  setRegistration,
+} from "../../../../../../lib/registration-store";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { requestId: string } },
 ) {
   const { requestId } = params;
-  const reg = store.get(requestId);
+  const reg = await getRegistration(requestId);
 
   if (!reg) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -35,7 +40,7 @@ export async function POST(
     );
   }
   if (reg.expiresAt < Date.now()) {
-    store.delete(requestId);
+    await deleteRegistration(requestId, reg.principalAddress);
     return NextResponse.json({ error: "Request expired" }, { status: 410 });
   }
 
@@ -93,6 +98,7 @@ export async function POST(
   if (passportId !== reg.passportId) {
     reg.passportId = passportId;
   }
+  await setRegistration(reg);
 
   return NextResponse.json({ ok: true, passportId: reg.passportId });
 }
