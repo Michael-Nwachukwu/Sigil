@@ -1,139 +1,230 @@
 # Sigil Protocol
 
-Identity and provenance infrastructure for autonomous AI agents on 0G.
+**Identity and provenance infrastructure for autonomous AI agents, built on 0G.**
 
-Sigil links two primitives permanently:
+Sigil links two on-chain primitives permanently:
 
-- `AgentPassport`: an on-chain identity anchor for an agent.
-- `ProvenanceRecord`: an on-chain notarization for a consequential artifact.
+- **AgentPassport** — an ERC-7857-compatible iNFT that gives any AI agent a portable, verifiable identity anchored to a human or service principal.
+- **ProvenanceRecord** — an on-chain notarization for any consequential AI-generated artifact, binding the output to the model, the input context, and the signing agent.
 
-The accountability chain is:
+The full accountability chain is a chain of on-chain view calls:
 
-`artifact -> recordId -> agent wallet -> passportId -> principal`
+```
+artifact → recordId → agent wallet → passportId → principal
+```
 
-Today the repo ships real contracts, a working TypeScript SDK, real demo agents, a Next.js resolver UI, and an interactive chat REPL. The hosted onboarding surfaces described in the original roadmap (`/skill.md` API endpoint and MCP server) are not implemented yet in this workspace.
+Anyone can resolve this chain. No trust in the platform required.
 
-## What It Solves
+---
 
-AI agents usually have weak identity and weak accountability:
+## The Problem
 
-- A consumer cannot easily tell which agent actually produced an output.
-- An operator cannot prove which authorized runtime signed a decision.
-- Reputation is trapped inside platforms instead of traveling with the agent.
+AI agents are proliferating but lack the basic identity and accountability infrastructure that every other consequential actor in finance, law, and software already has:
 
-Sigil gives each agent a portable identity and makes consequential outputs resolvable and verifiable after the fact.
+- A consumer cannot verify which agent produced an output or which human authorized it.
+- An operator cannot prove that a signed decision came from the expected autonomous runtime.
+- Reputation is locked inside platforms — it cannot travel with the agent across deployments.
+- AI-generated artifacts have no durable provenance — they can be silently altered, misattributed, or denied.
 
-## Status
+Sigil addresses this by making agent identity portable and artifact provenance on-chain and cryptographically bound.
 
-Completed now:
-
-- Smart contracts deployed to 0G Galileo testnet
-- SDK register/resolve/notarize flows working end-to-end
-- Real demo agents for risk scoring, code audit, generic prompts, and external-output notarization
-- Interactive chat agent REPL
-- `/passport` resolve UI with live on-chain reads, output visibility, manifest decrypt, and recent activity
-
-Still pending:
-
-- Explorer/source-code verification flow
-- Final submission video
-- Hosted API onboarding surface
-- MCP server onboarding surface
-
-## Live Deployment
-
-Network:
-
-- `0G Galileo Testnet`
-- Chain ID: `16602`
-- RPC: [https://evmrpc-testnet.0g.ai](https://evmrpc-testnet.0g.ai)
-- Explorer: [https://chainscan-galileo.0g.ai](https://chainscan-galileo.0g.ai)
-
-Contracts:
-
-- `SigilRegistry`: `0x2C0457F82B57148e8363b4589bb3294b23AE7625`
-- `ProvenanceNotary`: `0xA1103E6490ab174036392EbF5c798C9DaBAb24EE`
-
-Recent validation record:
-
-- `passportId`: `0xc8676207e71b448f046eedf0adfa3c2a13cb2d207bde5fadb0a3ff44d363b035`
-- `recordId`: `0xfbb9aa4b32203da5297e31fe6e3a56a78b804f47baa094125d68a64b711034c1`
-- `notarizeTx`: [0x847333c420f9c70a2210c0394693a894a30794f24278c811fbbc4bf6b5ad00e5](https://chainscan-galileo.0g.ai/tx/0x847333c420f9c70a2210c0394693a894a30794f24278c811fbbc4bf6b5ad00e5)
+---
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    P["Principal Wallet"] -->|"register()"| R["SigilRegistry"]
-    A["Agent Wallet"] -->|"notarize()"| N["ProvenanceNotary"]
-    R -->|"passportId / signer auth"| N
-    P -->|"encrypt manifest"| S["0G Storage"]
-    A -->|"encrypt input context"| S
-    A -->|"upload provenance envelope"| S
-    C["0G Compute"] -->|"sealed inference receipt"| N
-    U["Resolver UI / Verifier"] -->|"read-only calls"| R
-    U -->|"read-only calls"| N
-    U -->|"fetch envelope"| S
+flowchart TD
+    subgraph Principal["Principal (human / service)"]
+        PW["Principal Wallet"]
+    end
+
+    subgraph Agent["Agent Runtime"]
+        AW["Agent Wallet\n(fresh per passport)"]
+    end
+
+    subgraph OnChain["0G Chain — Smart Contracts"]
+        SR["SigilRegistry\n(AgentPassport iNFT)"]
+        PN["ProvenanceNotary\n(ProvenanceRecord)"]
+    end
+
+    subgraph OffChain["0G Storage"]
+        KV["Encrypted manifests\n& input contexts\n(AES-256-GCM)"]
+        LOG["Proof envelopes\n(sealed inference receipts)"]
+    end
+
+    subgraph Compute["0G Compute"]
+        LLM["qwen/qwen-2.5-7b-instruct\n(TEE sealed inference)"]
+    end
+
+    PW -->|"1 · encrypt manifest → upload"| KV
+    PW -->|"2 · register(passportId, agentAddress, manifestHash, uri)"| SR
+    AW -->|"3 · run sealed inference"| LLM
+    LLM -->|"4 · sealed receipt"| AW
+    AW -->|"5 · encrypt input context → upload"| KV
+    AW -->|"6 · upload proof envelope → capture rootHash"| LOG
+    AW -->|"7 · sign EIP-712 · notarize()"| PN
+    PN -->|"8 · isAuthorizedSigner check"| SR
+    SR -->|"9 · incrementProvenanceCount"| PN
+
+    Verifier["Verifier / Resolver"] -->|"resolve / verify"| SR
+    Verifier -->|"resolve / verify"| PN
+    Verifier -->|"fetch envelope"| LOG
 ```
+
+---
 
 ## Dual Wallet Model
 
-Sigil intentionally splits human control from autonomous execution:
+Sigil separates control from execution:
 
-- The `principal` wallet owns the passport and authorizes the agent once at registration time.
-- The `agent` wallet is a fresh signer dedicated to that passport.
-- The principal does not sign every action.
-- Every notarization is signed by the agent wallet and validated against the passport’s authorized signer on-chain.
+| Wallet | Role | Signs what |
+|---|---|---|
+| **Principal** | Owns the passport iNFT, holds funds, sets permissions | `register()` once; manifest decrypt |
+| **Agent** | Fresh keypair per passport, autonomous signer | Every `notarize()` call |
 
-This is why a resolver can prove both:
+The principal authorizes the agent once at registration. After that, the agent signs notarizations autonomously — no per-action principal interaction. On-chain, `ProvenanceNotary.notarize()` calls `SigilRegistry.isAuthorizedSigner(passportId, msg.sender)` to enforce this. The principal can rotate or revoke the agent at any time.
 
-- which autonomous signer produced an artifact
-- which human or service principal authorized that signer
+This is why a resolver can simultaneously prove:
+- which autonomous signer produced an artifact, and
+- which human or service principal originally authorized that signer.
+
+---
+
+## How It's Made
+
+**0G Chain** hosts two Solidity contracts deployed on 0G Galileo (chain ID 16602):
+
+- `SigilRegistry` — ERC-7857-compatible iNFT registry. Soulbound (transfers revert). Manages dual-wallet signer authorization, keeper relay set, reputation scoring, and provenance count. Includes `appendFingerprint` and `appendAttestation` for keeper relay use.
+- `ProvenanceNotary` — EIP-712 notarization records with per-signer nonce replay protection and on-chain reverse lookup from output hash → record.
+
+**0G Storage** is used for all off-chain payloads:
+- Permission manifests: encrypted with AES-256-GCM, key derived via HKDF from a principal signature — plaintext never leaves the principal's machine.
+- Input contexts: same encryption scheme, keyed to the agent.
+- Proof envelopes: sealed inference receipts from 0G Compute, stored as JSON. Their `keccak256` hash is the `modelFingerprintHash` anchored on-chain.
+
+**0G Compute** powers all sealed inference. Every chat agent response runs through `qwen/qwen-2.5-7b-instruct` via `@0glabs/0g-serving-broker`, which produces a TEE-verified receipt binding model + input → output. This receipt is hashed on-chain before the output is shown to the user.
+
+**TypeScript SDK** (`sdk/`, package `sigil-protocol`) wraps all three 0G primitives. It handles:
+- Registration: keypair generation, manifest encryption, 0G Storage upload, on-chain `register()`.
+- Notarization: input context encryption, sealed receipt upload, EIP-712 signing, on-chain `notarize()`.
+- Resolution: on-chain reads plus 0G Storage fetch for proof envelopes and manifest decryption.
+
+**Demo agents and REPL** (`demo/`) show the SDK in four different usage shapes:
+- `RiskScorerAgent` — fetches real DeFi protocol data from DefiLlama, runs sealed inference for a risk score, notarizes the result.
+- `AuditAgent` — runs smart contract security audit via sealed inference, notarizes findings.
+- `PromptAgent` / chat REPL — generic sealed inference agent; every reply notarized on-chain live in the terminal.
+- `NotarizeOnlyAdapter` — for agents already running their own LLM (OpenAI, Anthropic, etc.); notarizes external outputs without requiring 0G Compute.
+
+**Next.js resolver UI** (`demo/ui/`) reads live from the 0G chain. Resolves passportId, recordId, agent address, or output hash. Renders the full accountability chain, decrypts permission manifests in-browser for the matching principal wallet.
+
+The notable hackathon shortcut: the auto-attest sidecar (`sdk/src/passport/AutoAttest.ts`) simulates keeper-driven attestations so reputation counters move in real time during demos, while the core notarization path is fully real and on-chain.
+
+---
+
+## Live Deployment
+
+| | |
+|---|---|
+| Network | 0G Galileo Testnet |
+| Chain ID | `16602` |
+| RPC | `https://evmrpc-testnet.0g.ai` |
+| Explorer | `https://chainscan-galileo.0g.ai` |
+| Faucet | `https://faucet.0g.ai` |
+
+| Contract | Address |
+|---|---|
+| `SigilRegistry` | [`0x2C0457F82B57148e8363b4589bb3294b23AE7625`](https://chainscan-galileo.0g.ai/address/0x2C0457F82B57148e8363b4589bb3294b23AE7625) |
+| `ProvenanceNotary` | [`0xA1103E6490ab174036392EbF5c798C9DaBAb24EE`](https://chainscan-galileo.0g.ai/address/0xA1103E6490ab174036392EbF5c798C9DaBAb24EE) |
+
+Live on-chain records:
+
+| | |
+|---|---|
+| PromptAgent passportId | `0x87c4d2f5fdb754702532cdfb55c279e83fbd343fa2f42618d836e485c419a36d` |
+| RiskScorerAgent passportId | `0x4a2c793f17dd95824d638d9ecb4c7625d2b31164d45eacaa42a128ea714d83ca` |
+| AuditAgent passportId | `0xb2a7894be763a5286aa1dc58e161818dcdfb149937217d31cc6a81f601917ec0` |
+| Recent notarizeTx | [`0xadf14d01fd433fb4bcf567a16f5d4b5b2ffd33071116a742bbaf6de8351b2738`](https://chainscan-galileo.0g.ai/tx/0xadf14d01fd433fb4bcf567a16f5d4b5b2ffd33071116a742bbaf6de8351b2738) |
+
+---
 
 ## Repo Layout
 
-- [contracts](/Users/michaelnwachukwu/Documents/projects/sigil/contracts) Solidity contracts and tests
-- [sdk](/Users/michaelnwachukwu/Documents/projects/sigil/sdk) TypeScript SDK
-- [demo](/Users/michaelnwachukwu/Documents/projects/sigil/demo) real demo agents and scenarios
-- [demo/ui](/Users/michaelnwachukwu/Documents/projects/sigil/demo/ui) Next.js demo UI
-- [public/SKILL.md](/Users/michaelnwachukwu/Documents/projects/sigil/public/SKILL.md) local onboarding document for agents
-- [PROJECT_STATE.md](/Users/michaelnwachukwu/Documents/projects/sigil/PROJECT_STATE.md) current build log and handoff state
+```
+sigil-protocol/
+├── contracts/          Solidity contracts + Hardhat tests (48/48 passing)
+│   ├── SigilRegistry.sol
+│   ├── ProvenanceNotary.sol
+│   ├── SigilRegistry.flat.sol    flattened for explorer verification
+│   └── ProvenanceNotary.flat.sol flattened for explorer verification
+├── sdk/                TypeScript SDK (sigil-protocol)
+│   └── src/
+│       ├── passport/   AgentPassport + AutoAttestSidecar
+│       ├── provenance/ ProvenanceNotaryClient
+│       ├── adapters/   ZeroGStorageAdapter, ZeroGComputeAdapter, KeeperHubAdapter
+│       └── utils/      crypto, logger, errors, withRetry
+├── demo/
+│   ├── agents/         RiskScorerAgent, AuditAgent, ChatAgent, NotarizeOnly
+│   ├── scripts/        CLI runners + chat REPL + top-up-agent
+│   ├── scenarios/      scenario1 (identity), scenario2 (provenance), scenario3 (living resume)
+│   └── ui/             Next.js resolver + landing + /skill-md
+├── deployments/        galileo-testnet.json (contract addresses, never gitignored)
+├── public/SKILL.md     local agent onboarding document
+└── PROJECT_STATE.md    live build log
+```
+
+---
 
 ## Setup
 
-1. Install dependencies:
+### Prerequisites
+
+- Node.js ≥ 20
+- pnpm ≥ 9
+- A funded wallet on 0G Galileo testnet ([faucet](https://faucet.0g.ai))
+
+### Install
 
 ```bash
 pnpm install
 ```
 
-2. Copy env file:
+### Environment
 
 ```bash
 cp .env.example .env
 ```
 
-3. Fill in at least:
+Minimum required variables:
 
-- `ZERO_G_RPC_URL`
-- `ZERO_G_CHAIN_ID`
-- `ZERO_G_PRIVATE_KEY`
-- `SIGIL_REGISTRY_ADDRESS`
-- `PROVENANCE_NOTARY_ADDRESS`
+```env
+ZERO_G_RPC_URL=https://evmrpc-testnet.0g.ai
+ZERO_G_CHAIN_ID=16602
+ZERO_G_PRIVATE_KEY=<your-principal-private-key>
+SIGIL_REGISTRY_ADDRESS=0x2C0457F82B57148e8363b4589bb3294b23AE7625
+PROVENANCE_NOTARY_ADDRESS=0xA1103E6490ab174036392EbF5c798C9DaBAb24EE
+ZERO_G_COMPUTE_DEFAULT_MODEL=qwen/qwen-2.5-7b-instruct
+```
 
-Optional but useful:
+Optional — enables demo auto-attestation (reputation counters update after each notarization):
 
-- `SIGIL_KEEPER_RELAY_PRIVATE_KEY` to enable demo auto-attest
-- `ZERO_G_EXPLORER_URL`
-- `ZERO_G_COMPUTE_DEFAULT_MODEL`
+```env
+SIGIL_KEEPER_RELAY_PRIVATE_KEY=<relay-wallet-private-key>
+```
 
-## Build And Verify
+After setting the relay key, register it on-chain once:
 
-Contracts:
+```bash
+pnpm --filter sigil-demo run add-relay
+```
+
+---
+
+## Build and Test
+
+Contracts (48 tests, ≥95% coverage):
 
 ```bash
 pnpm --filter @sigil/contracts run test
-pnpm --filter @sigil/contracts run build
 ```
 
 SDK:
@@ -145,147 +236,125 @@ pnpm --filter sigil-protocol run build
 Demo UI:
 
 ```bash
-pnpm --filter sigil-demo-ui run typecheck
 pnpm --filter sigil-demo-ui run build
 ```
 
-## Run The Demo UI
+---
+
+## Running the Demo
+
+### 1 · Resolver UI
 
 ```bash
 pnpm --filter sigil-demo-ui run dev
 ```
 
-Then open:
+Open:
+- `/` — landing page
+- `/passport` — resolve any passportId, recordId, agent address, or output hash against live chain
+- `/skill-md` — agent onboarding walkthrough
 
-- `/` landing page
-- `/passport` resolver
-- `/skill-md` static onboarding view
+The recent activity feed on `/passport` pulls live `AgentRegistered` and `ArtifactNotarized` events so you can click into real records without already knowing an ID.
 
-## Demo Agents
-
-Create or reuse demo fixtures:
+### 2 · Demo Agents (first run registers + funds; subsequent runs reuse cached passport)
 
 ```bash
-pnpm --filter sigil-demo run risk-scorer
-pnpm --filter sigil-demo run audit-agent
-pnpm --filter sigil-demo run prompt
-pnpm --filter sigil-demo run notarize-output
+pnpm --filter sigil-demo run risk-scorer    # DeFi risk score via DefiLlama + 0G Compute
+pnpm --filter sigil-demo run audit-agent    # Smart contract security audit via 0G Compute
+pnpm --filter sigil-demo run prompt         # Generic sealed-inference agent
+pnpm --filter sigil-demo run notarize-output # Notarize an output from any external LLM
 ```
 
-What each one proves:
-
-- `risk-scorer`: real data fetch + 0G Compute + notarized risk assessment
-- `audit-agent`: real 0G Compute audit findings + notarized code-audit artifact
-- `prompt`: generic prompt-driven agent can still get a stable on-chain identity
-- `notarize-output`: off-0G or external agents can still notarize outputs, even when the model proof is unsealed
-
-## Interactive Agent
-
-Launch the chat REPL:
+### 3 · Interactive Chat REPL
 
 ```bash
 pnpm --filter sigil-demo run chat -- --name prompt-agent
 ```
 
-Available fixtures:
+Every reply runs sealed inference on 0G Compute and notarizes the response on-chain. The terminal prints `recordId`, `outputHash`, and a live explorer link for each turn.
 
-- `risk-scorer`
-- `audit-agent`
-- `prompt-agent`
-- `notarize-only`
-
-Inside the REPL:
-
-- normal text asks the agent to answer and notarize the reply
-- `/whoami` prints passport and signer identity
-- `/last` prints the last notarization
-- `/last-trace` reveals the hidden raw trace from the previous turn
-- `/trace` toggles persistent raw trace visibility
-
-The REPL now shows clean progress stages by default:
-
-- `planning response...`
-- `running sealed inference...`
-- `notarizing response...`
-
-## Resolver UI
-
-The `/passport` page can resolve:
-
-- `passportId -> PassportRecord`
-- `agent address -> passportId -> PassportRecord`
-- `recordId -> ProvenanceRecord`
-- `outputHash -> recordId -> ProvenanceRecord`
-
-It also:
-
-- fetches the v2 provenance envelope from 0G Storage
-- renders embedded output text for new records
-- verifies agent signature validity on-chain
-- exposes recent activity as a self-driving discovery rail
-- lets the principal wallet decrypt the permission manifest in-browser
-
-## Why Tasks And Reputation May Still Be Zero
-
-`provenanceRecordCount` increases when an agent notarizes artifacts.
-
-`taskCount`, `failureCount`, and `reputationScore` only move when keeper relays append attestations. The auto-attest flow in this repo is a demo-only sidecar and is opt-in:
-
-- set `SIGIL_KEEPER_RELAY_PRIVATE_KEY`
-- register that relay on-chain with:
+If the agent wallet runs low on OG (each turn costs ~0.005 OG for 0G Storage fees):
 
 ```bash
-pnpm --filter sigil-demo run add-relay
+pnpm --filter sigil-demo run top-up -- --name prompt-agent --amount 0.1
 ```
 
-If the relay is not configured, chat and demo runs still notarize successfully, but reputation/task counters remain unchanged.
+REPL commands:
+- `/whoami` — print passport and signer identity
+- `/last` — print the last notarization
+- `/last-trace` — show the raw SDK trace from the previous turn
+- `/trace` — toggle persistent raw trace mode
+- `/exit` — quit
 
-## Demo Scenarios
-
-Run from repo root:
+### 4 · Demo Scenarios
 
 ```bash
-pnpm --filter sigil-demo run scenario1
-pnpm --filter sigil-demo run scenario2
-pnpm --filter sigil-demo run scenario3
+pnpm --filter sigil-demo run scenario1   # Identity resolution — read-only walk of all agents
+pnpm --filter sigil-demo run scenario2   # Provenance — forward and backward lookup
+pnpm --filter sigil-demo run scenario3   # Living resume — new notarizations, full history
 ```
 
-What they prove:
+---
 
-- `scenario1`: identity resolution is read-open; a fresh verifier wallet can resolve passport identity and signer authority directly from chain
-- `scenario2`: forward and backward provenance both work; given a passport you can list outputs, and given an output hash you can resolve the exact producing record
-- `scenario3`: an agent’s “resume” is the chronological history of the records it has actually produced on-chain
+## Contract Verification
 
-## Documentation And Onboarding Options
+Flattened source files (all imports inlined, single SPDX header) are at:
+- `contracts/SigilRegistry.flat.sol`
+- `contracts/ProvenanceNotary.flat.sol`
 
-Current state:
+Verification settings for the 0G Galileo explorer:
 
-- Static local onboarding doc exists at [public/SKILL.md](/Users/michaelnwachukwu/Documents/projects/sigil/public/SKILL.md)
-- `/skill-md` in the UI renders that document narratively
-- There is no hosted `/skill.md` registration API endpoint yet
-- There is no `api/` package or `mcp-server/` package implemented yet in this workspace
+| Field | Value |
+|---|---|
+| Compiler | `v0.8.24+commit.e11b9ed9` |
+| Optimization | Yes |
+| Runs | 200 |
+| EVM Version | **`cancun`** (not `default`) |
+| viaIR | **Enabled** (Advanced Settings) |
+| License | MIT |
 
-Good documentation/onboarding options from here:
+Paste the contents of the `.flat.sol` file into the "Contract Source Code" field.
 
-1. SDK-first documentation
-   Best for developers and current judges. Keep a strong README plus a corrected SKILL.md and let existing agents integrate locally first.
-2. Hosted API onboarding
-   Add a real `/skill.md` endpoint plus registration/status endpoints for agents that only speak HTTP.
-3. MCP onboarding
-   Add a local stdio MCP server for agent runtimes with access to their own private key, and a remote read-only MCP surface for register/resolve/verify flows.
+---
 
-Recommended order:
+## Key Design Decisions
 
-1. Finish README, diagrams, and demo script
-2. Add hosted `/skill.md` + registration API
-3. Add MCP server once the HTTP shapes are stable
+**Why a fresh agent keypair per passport?**
+Reusing wallets across agents creates correlation risk and complicates signer rotation. A fresh keypair per registration means `revokeAgent()` + re-register cleanly replaces a compromised agent without touching the principal.
 
-## Current Gaps
+**Why 0G Storage for off-chain payloads?**
+The same network that hosts the contracts also hosts the blobs. There is no off-chain storage dependency on a third party. The content-addressed rootHash stored on-chain lets anyone verify that the blob hasn't been altered since notarization.
 
-- Explorer/source-code verification is not automated yet in this repo
-- `api/` and `mcp-server/` remain Phase 5b work
-- The current chat REPL is a question-answering plus notarization runtime, not a wallet-execution agent
-- The auto-attest sidecar is a demo simulator, not a production verification pipeline
+**Why seal inference receipts on 0G Compute?**
+A standard LLM API call is not verifiable — the platform can lie about the model or the output. 0G Compute's TEE-verified receipts cryptographically bind a specific model version to a specific input→output pair. This is what makes a ProvenanceRecord meaningful rather than just a signed timestamp.
+
+**Sealed vs unsealed records**
+Agents running on 0G Compute get TEE-verified receipts (`verified: true`). Agents running on any other LLM can still notarize outputs via `NotarizeOnlyAdapter` — the record is signed by the agent and anchored on-chain, but the `modelFingerprintHash` covers an unsealed envelope (`proofType: "unsealed-external"`). Verifiers should inspect the proof envelope before trusting the model→output binding.
+
+**Auto-attest sidecar**
+In production, an independent keeper relay would verify agent outputs off-chain and then call `appendAttestation` on-chain to update reputation. For the demo, an opt-in sidecar does this immediately after each notarization using the principal wallet as a demo relay. It is clearly marked `demoSimulated: true` in every attestation record.
+
+---
+
+## Current Status
+
+| Component | Status |
+|---|---|
+| SigilRegistry contract | Deployed, tests passing |
+| ProvenanceNotary contract | Deployed, tests passing |
+| TypeScript SDK | Complete |
+| RiskScorerAgent | Live on-chain records |
+| AuditAgent | Live on-chain records |
+| PromptAgent + chat REPL | Live on-chain records |
+| NotarizeOnly adapter | Live on-chain records |
+| Demo scenarios 1–3 | Working |
+| Resolver UI (`/passport`) | Live reads from chain |
+| Contract source verification | In progress |
+| API onboarding server | Not started |
+| MCP server | Not started |
+| SDK npm publish | Not started |
+
+---
 
 ## License
 
