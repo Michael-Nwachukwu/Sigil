@@ -192,14 +192,7 @@ export function SkillMdSection() {
           <span style={{ width: 16, height: 1, background: "var(--accent)", display: "inline-block" }} />
           SKILL.md Onboarding
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 64,
-            alignItems: "center",
-          }}
-        >
+        <div className="split-2-col" style={{ alignItems: "center" }}>
           <div>
             <h2
               className="display"
@@ -244,17 +237,7 @@ export function SkillMdSection() {
 
 export function LandingFooter() {
   return (
-    <footer
-      style={{
-        borderTop: "1px solid var(--border)",
-        padding: "36px 52px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 24,
-        flexWrap: "wrap",
-      }}
-    >
+    <footer className="landing-footer">
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <SigilMark size={22} />
         <span style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600 }}>
@@ -326,13 +309,7 @@ export function SkillMdPage() {
     <>
       <NavBar links={standaloneLinks} theme={theme} setTheme={setTheme} />
       <div style={{ paddingTop: 56 }}>
-        <div
-          style={{
-            padding: "64px 52px 48px",
-            borderBottom: "1px solid var(--border)",
-            textAlign: "center",
-          }}
-        >
+        <div className="skill-md-hero">
           <div
             style={{
               fontFamily: "var(--font-mono)",
@@ -385,14 +362,7 @@ export function SkillMdPage() {
         </div>
 
         <div className="page-wrap" style={{ paddingTop: 64, paddingBottom: 64 }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: 72,
-              alignItems: "start",
-            }}
-          >
+          <div className="split-2-col">
             <div>
               <h2
                 className="display"
@@ -477,17 +447,7 @@ export function SkillMdPage() {
           </div>
         </div>
 
-        <footer
-          style={{
-            borderTop: "1px solid var(--border)",
-            padding: "28px 52px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-            flexWrap: "wrap",
-          }}
-        >
+        <footer className="skill-md-footer">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <SigilMark size={20} />
             <span style={{ fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 600 }}>

@@ -226,6 +226,85 @@ body::before {
   align-items: start;
 }
 
+/* Responsive helpers — used by landing/docs/passport layouts */
+.responsive-grid {
+  display: grid;
+  gap: 28px;
+  align-items: start;
+}
+.split-2-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 64px;
+  align-items: start;
+}
+.problem-shell {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.1fr);
+  gap: 28px;
+  align-items: stretch;
+}
+.hero-section {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 52px 80px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.hero-stats {
+  display: flex;
+  gap: 40px;
+  padding-top: 32px;
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.landing-footer {
+  border-top: 1px solid var(--border);
+  padding: 36px 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.skill-md-hero {
+  padding: 64px 52px 48px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.skill-md-footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.passport-header {
+  padding: 48px 52px 32px;
+  border-bottom: 1px solid var(--border);
+}
+.passport-content {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 32px 52px 64px;
+}
+.dual-wallet-diagram {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  justify-content: center;
+  position: relative;
+  flex-wrap: wrap;
+}
+
 .resolve-sidebar {
   position: sticky;
   top: 84px;
@@ -340,18 +419,180 @@ body::before {
   100% { stroke-dashoffset: 0; opacity: 1; }
 }
 
+/* ── Mobile nav drawer (hamburger menu) ─────────────────────────────── */
+.nav-mobile-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 6px 9px;
+  cursor: pointer;
+  color: var(--text-2);
+  align-items: center;
+  justify-content: center;
+}
+.nav-mobile-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.nav-links-desktop { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+.nav-cta-desktop { display: flex; align-items: center; gap: 12px; }
+.nav-mobile-drawer { display: none; }
+
+/* ── Tablet (≤ 900px) ───────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .page-wrap, .page-wide, .nav {
+  .page-wrap, .page-wide {
     padding-left: 24px;
     padding-right: 24px;
   }
-
-  .resolve-shell {
-    grid-template-columns: 1fr;
+  .nav {
+    padding-left: 20px;
+    padding-right: 20px;
   }
 
+  .section { padding: 64px 0; }
+
+  .resolve-shell { grid-template-columns: 1fr; }
   .resolve-sidebar {
     position: static;
     top: auto;
+    max-height: none;
   }
+
+  .problem-shell { grid-template-columns: 1fr; }
+  .split-2-col { gap: 40px; }
+
+  .hero-section { padding: 80px 24px 60px; }
+  .hero-stats { gap: 24px; }
+
+  .skill-md-hero { padding: 48px 24px 36px; }
+  .skill-md-footer,
+  .landing-footer {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .passport-header { padding: 36px 24px 24px; }
+  .passport-content { padding: 24px 24px 48px; }
+
+  /* Hide desktop nav, show hamburger */
+  .nav-links-desktop { display: none; }
+  .nav-mobile-toggle { display: inline-flex; }
+  .nav-mobile-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    background: var(--nav-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px 20px;
+    gap: 6px;
+    z-index: 99;
+    box-shadow: var(--shadow);
+  }
+  .nav-mobile-drawer a {
+    display: block;
+    padding: 12px 8px;
+    color: var(--text-2);
+    text-decoration: none;
+    font-size: 15px;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-mobile-drawer a:last-of-type { border-bottom: none; }
+
+  /* Docs layout — mobile drawer */
+  .docs-sidebar {
+    position: fixed !important;
+    top: 52px !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100% !important;
+    height: calc(100vh - 52px) !important;
+    z-index: 50;
+    background: var(--bg) !important;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    border-right: none !important;
+  }
+  .docs-sidebar.open { transform: translateX(0); }
+  .docs-mobile-toggle { display: inline-flex !important; }
+  .docs-main {
+    padding: 28px 20px 60px !important;
+    max-width: 100% !important;
+  }
+
+  /* Hero terminal */
+  .hero-terminal-tabs button {
+    padding: 7px 12px !important;
+    font-size: 10px !important;
+  }
+
+  /* Tabs/buttons inside resolver */
+  .resolve-shell input { min-width: 0 !important; }
+
+  /* Tables overflow */
+  table { font-size: 12px; }
+}
+
+/* ── Mobile (≤ 600px) ───────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .page-wrap, .page-wide {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .nav {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .section { padding: 48px 0; }
+
+  .hero-section { padding: 64px 16px 48px; }
+  .hero-stats {
+    gap: 20px;
+    padding-top: 24px;
+    margin-top: 16px;
+  }
+
+  .skill-md-hero { padding: 36px 16px 28px; }
+  .skill-md-footer,
+  .landing-footer {
+    padding: 24px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .passport-header { padding: 28px 16px 20px; }
+  .passport-content { padding: 20px 16px 40px; }
+
+  .split-2-col { gap: 32px; }
+
+  /* Dual wallet diagram — stack vertically */
+  .dual-wallet-diagram {
+    flex-direction: column;
+    align-items: center;
+  }
+  .dual-wallet-arrow {
+    width: 60px !important;
+    padding-top: 0 !important;
+    transform: rotate(90deg);
+    margin: 8px 0;
+  }
+
+  /* Hero terminal — smaller padding */
+  .hero-terminal-body {
+    padding: 14px 14px !important;
+    min-height: 240px !important;
+    max-height: 300px !important;
+  }
+
+  /* Force code blocks scroll horizontally rather than overflow */
+  pre, .code-block { font-size: 11.5px; }
+
+  /* Resolver tabs row */
+  .resolve-shell .card-header { padding: 10px 14px !important; }
 }

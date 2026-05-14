@@ -155,26 +155,40 @@ export function DocsLayout({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle sidebar"
+            className="docs-mobile-toggle"
             style={{
               display: "none",
               background: "none",
               border: "1px solid var(--border)",
               borderRadius: 6,
-              padding: "4px 8px",
+              padding: "4px 10px",
               cursor: "pointer",
               color: "var(--text-2)",
               fontSize: 14,
             }}
-            className="mobile-menu-btn"
           >
-            ☰
+            {mobileOpen ? "✕" : "☰"}
           </button>
         </div>
       </header>
 
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            top: 52,
+            background: "rgba(0,0,0,0.4)",
+            zIndex: 40,
+          }}
+        />
+      )}
+
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Sidebar */}
         <aside
+          className={`docs-sidebar${mobileOpen ? " open" : ""}`}
           style={{
             width: 224,
             flexShrink: 0,
@@ -258,6 +272,7 @@ export function DocsLayout({ children }: { children: React.ReactNode }) {
 
         {/* Main content */}
         <main
+          className="docs-main"
           style={{
             flex: 1,
             padding: "40px 48px 80px",
@@ -530,12 +545,12 @@ export function PropTable({
       style={{
         border: "1px solid var(--border)",
         borderRadius: 7,
-        overflow: "hidden",
+        overflowX: "auto",
         marginBottom: 24,
         fontSize: 13,
       }}
     >
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
         <thead>
           <tr style={{ background: "var(--bg-raised)" }}>
             {["Parameter", "Type", "Description"].map((h) => (

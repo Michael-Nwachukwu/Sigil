@@ -21,7 +21,7 @@ export function PassportPage() {
     <>
       <NavBar links={navLinks} theme={theme} setTheme={setTheme} />
       <div style={{ paddingTop: 56 }}>
-        <div style={{ padding: "48px 52px 32px", borderBottom: "1px solid var(--border)" }}>
+        <div className="passport-header">
           <div style={{ maxWidth: 860, margin: "0 auto" }}>
             <div
               style={{
@@ -94,7 +94,7 @@ export function PassportPage() {
           </div>
         </div>
 
-        <div style={{ maxWidth: 1160, margin: "0 auto", padding: "32px 52px 64px" }}>
+        <div className="passport-content">
           <Resolver />
         </div>
       </div>

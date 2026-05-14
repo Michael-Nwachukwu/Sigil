@@ -138,16 +138,7 @@ export function DualWalletDiagram() {
 
   return (
     <div style={{ position: "relative", padding: "40px 0" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 0,
-          justifyContent: "center",
-          position: "relative",
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="dual-wallet-diagram">
         <div
           style={{
             width: 200,
@@ -214,6 +205,7 @@ export function DualWalletDiagram() {
         </div>
 
         <div
+          className="dual-wallet-arrow"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -378,14 +370,7 @@ export function DualWalletSection() {
   return (
     <section className="section" id="dual-wallet">
       <div className="page-wrap">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 80,
-            alignItems: "start",
-          }}
-        >
+        <div className="split-2-col">
           <div>
             <div
               style={{
@@ -519,14 +504,7 @@ export function SDKSection() {
           <span style={{ width: 20, height: 1, background: "var(--accent)", display: "inline-block" }} />
           TypeScript SDK
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 80,
-            alignItems: "start",
-          }}
-        >
+        <div className="split-2-col">
           <div>
             <h2
               className="display"

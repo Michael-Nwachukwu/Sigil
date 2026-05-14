@@ -519,19 +519,7 @@ export function LandingHero() {
   }, []);
 
   return (
-    <section
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "100px 52px 80px",
-        position: "relative",
-        overflow: "hidden",
-        textAlign: "center",
-      }}
-    >
+    <section className="hero-section">
       <div
         style={{
           position: "absolute",
@@ -653,17 +641,7 @@ export function LandingHero() {
 
         <HeroTerminal />
 
-        <div
-          style={{
-            display: "flex",
-            gap: 40,
-            paddingTop: 32,
-            marginTop: 24,
-            borderTop: "1px solid var(--border)",
-            flexWrap: "wrap",
-            justifyContent: "center",
-          }}
-        >
+        <div className="hero-stats">
           {[
             [
               "Registry",
@@ -833,20 +811,12 @@ export function ThreeProblems() {
           </p>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(280px, 0.9fr) minmax(360px, 1.1fr)",
-            gap: 28,
-            alignItems: "stretch",
-          }}
-        >
+        <div className="problem-shell">
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               gap: 14,
-              minHeight: 540,
             }}
           >
             {PROBLEMS.map((problem, index) => {
@@ -923,7 +893,7 @@ export function ThreeProblems() {
             })}
           </div>
 
-          <div style={{ position: "relative", minHeight: 540 }}>
+          <div style={{ position: "relative" }}>
             <div
               style={{
                 position: "absolute",
@@ -1033,7 +1003,7 @@ export function ThreeProblems() {
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1.15fr 0.85fr",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                       gap: 16,
                     }}
                   >

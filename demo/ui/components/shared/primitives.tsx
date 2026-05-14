@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -508,6 +507,7 @@ export function NavBar({
   cta?: { href: string; label: string };
 }) {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -515,70 +515,139 @@ export function NavBar({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth > 900) setMenuOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   return (
-    <nav
-      className="nav"
-      style={{
-        borderBottomColor: scrolled ? "var(--border)" : "transparent",
-        transition: "border-color .3s, background .3s",
-      }}
-    >
-      <Link
-        href="/"
+    <>
+      <nav
+        className="nav"
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          textDecoration: "none",
-          color: "var(--text)",
+          borderBottomColor: scrolled ? "var(--border)" : "transparent",
+          transition: "border-color .3s, background .3s",
         }}
       >
-        {/* <Image src="/logoq.png" alt="Sigil Protocol" width={200} height={50} /> */}
-        <SigilMark size={28} />
-        <span
+        <Link
+          href="/"
           style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 16,
-            fontWeight: 700,
-            letterSpacing: "-0.01em",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            textDecoration: "none",
+            color: "var(--text)",
+            minWidth: 0,
           }}
         >
-          Sigil Protocol
-        </span>
-      </Link>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" }}>
-        {links.map(([label, href]) => (
-          <a
-            key={`${label}-${href}`}
-            href={href}
+          <SigilMark size={28} />
+          <span
             style={{
-              fontSize: 13,
-              color: "var(--text-2)",
-              textDecoration: "none",
-              fontWeight: 500,
-              transition: "color .2s",
-            }}
-            onMouseEnter={(event) => {
-              event.currentTarget.style.color = "var(--text)";
-            }}
-            onMouseLeave={(event) => {
-              event.currentTarget.style.color = "var(--text-2)";
+              fontFamily: "var(--font-display)",
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+              whiteSpace: "nowrap",
             }}
           >
-            {label}
-          </a>
-        ))}
-      </div>
+            Sigil Protocol
+          </span>
+        </Link>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <ThemeToggle current={theme} setCurrent={setTheme} />
-        {cta ? (
-          <a href={cta.href} className="btn btn-primary" style={{ fontSize: 12 }}>
-            {cta.label}
-          </a>
-        ) : null}
-      </div>
-    </nav>
+        <div className="nav-links-desktop">
+          {links.map(([label, href]) => (
+            <a
+              key={`${label}-${href}`}
+              href={href}
+              style={{
+                fontSize: 13,
+                color: "var(--text-2)",
+                textDecoration: "none",
+                fontWeight: 500,
+                transition: "color .2s",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.color = "var(--text)";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.color = "var(--text-2)";
+              }}
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+
+        <div className="nav-cta-desktop">
+          <ThemeToggle current={theme} setCurrent={setTheme} />
+          {cta ? (
+            <a href={cta.href} className="btn btn-primary" style={{ fontSize: 12 }}>
+              {cta.label}
+            </a>
+          ) : null}
+        </div>
+
+        <button
+          type="button"
+          className="nav-mobile-toggle"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            {menuOpen ? (
+              <path
+                d="M4 4l10 10M14 4L4 14"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            ) : (
+              <path
+                d="M2 5h14M2 9h14M2 13h14"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            )}
+          </svg>
+        </button>
+      </nav>
+
+      {menuOpen ? (
+        <div className="nav-mobile-drawer" role="dialog" aria-label="Mobile navigation">
+          {links.map(([label, href]) => (
+            <a key={`m-${label}-${href}`} href={href} onClick={() => setMenuOpen(false)}>
+              {label}
+            </a>
+          ))}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginTop: 12,
+              paddingTop: 12,
+              borderTop: "1px solid var(--border)",
+            }}
+          >
+            <ThemeToggle current={theme} setCurrent={setTheme} />
+            {cta ? (
+              <a
+                href={cta.href}
+                className="btn btn-primary"
+                style={{ fontSize: 12 }}
+                onClick={() => setMenuOpen(false)}
+              >
+                {cta.label}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
